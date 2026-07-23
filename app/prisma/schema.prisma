@@ -37,6 +37,8 @@ model Entity {
   userAccess   UserAccess[]
   partyLinks   PartyEntityLink[]
   obligations  Obligation[]
+  ownedInterests   OwnershipInterest[] @relation("OwnerOf") // participaciones que ESTA entidad posee en otras
+  interestsHeldBy  OwnershipInterest[] @relation("OwnedBy") // participaciones que otros poseen SOBRE esta entidad
 
   @@map("entities")
 }
@@ -175,4 +177,28 @@ model ObligationDueRule {
   updatedAt    DateTime   @updatedAt
 
   @@map("obligation_due_rules")
+}
+
+// ---------------------------------------------------------------------------
+// GROUP, COMPANIES & OWNERSHIP (FS-003) — participaciones fechadas
+// ---------------------------------------------------------------------------
+
+model OwnershipInterest {
+  id                String    @id @default(uuid())
+  ownerId           String // quién posee (hoy: el perfil personal de Ronald)
+  owner             Entity    @relation("OwnerOf", fields: [ownerId], references: [id])
+  subjectEntityId   String // sobre qué entidad es la participación
+  subjectEntity     Entity    @relation("OwnedBy", fields: [subjectEntityId], references: [id])
+  interestType      String    @default("equity") // equity | economic_rights | voting_control
+  percentage        Decimal?  @db.Decimal(5, 2) // nullable: puede ser desconocido (regla FS-003)
+  effectiveFrom     DateTime
+  effectiveTo       DateTime? // null = vigente
+  sourceDocument    String? // referencia al documento que respalda el dato
+  verificationState String    @default("unverified") // unverified | verified
+  approvedBy        String? // quién verificó/aprobó el dato
+  notes             String? // ej: "pendiente cierre documental del 50% restante"
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("ownership_interests")
 }

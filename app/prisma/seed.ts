@@ -36,11 +36,12 @@ async function main() {
 
   const personal = await prisma.entity.upsert({
     where: { id: "ruc-personal-ronald" },
-    update: {},
+    update: { taxId: "3676596-1" },
     create: {
       id: "ruc-personal-ronald",
       name: "RUC Personal — Ronald Alejandro Barrios Duarte",
       type: "PERSONAL_PROFILE",
+      taxId: "3676596-1",
       jurisdiction: "Paraguay",
       baseCurrency: "PYG",
     },
@@ -182,6 +183,46 @@ async function main() {
   }
 
   console.log("✔ Acceso OWNER asignado a Ronald en las 3 entidades.");
+
+  // ---------------------------------------------------------------------
+  // 5) Ownership (FS-003) — solo se registran hechos YA consumados.
+  // El 50% restante de Amelia está negociado pero NO cerrado documentalmente
+  // — por regla constitucional (MD-000 #1: no inventar hechos) NO se carga
+  // acá como participación; queda anotado como nota abierta hasta el cierre.
+  // ---------------------------------------------------------------------
+  await prisma.ownershipInterest.upsert({
+    where: { id: "ownership-ronald-axentia" },
+    update: {},
+    create: {
+      id: "ownership-ronald-axentia",
+      ownerId: personal.id,
+      subjectEntityId: axentia.id,
+      interestType: "equity",
+      percentage: 100.0,
+      effectiveFrom: axentia.createdAt,
+      verificationState: "verified",
+      approvedBy: "owner",
+    },
+  });
+
+  await prisma.ownershipInterest.upsert({
+    where: { id: "ownership-ronald-amelia" },
+    update: {},
+    create: {
+      id: "ownership-ronald-amelia",
+      ownerId: personal.id,
+      subjectEntityId: amelia.id,
+      interestType: "equity",
+      percentage: 50.0,
+      effectiveFrom: amelia.createdAt,
+      verificationState: "verified",
+      approvedBy: "owner",
+      notes:
+        "Negociado un 50% adicional (llegar\u00eda a 100%). Pendiente cierre documental — no se registra como participación hasta confirmarse formalmente.",
+    },
+  });
+
+  console.log("✔ Ownership cargado: 100% Axentia, 50% Amelia (el otro 50% queda como nota abierta, sin cerrar).");
 }
 
 main()

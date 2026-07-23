@@ -48,6 +48,14 @@ export default async function Home() {
     };
   });
 
+  // FS-003: participaciones donde la entidad "sujeto" es una de las
+  // entidades a las que este usuario tiene acceso.
+  const ownershipInterests = await prisma.ownershipInterest.findMany({
+    where: { subjectEntityId: { in: entityIds } },
+    include: { owner: true, subjectEntity: true },
+    orderBy: { subjectEntity: { name: "asc" } },
+  });
+
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 p-8">
       <header className="flex items-center justify-between">
@@ -62,6 +70,30 @@ export default async function Home() {
         </div>
         <UserButton afterSignOutUrl="/sign-in" />
       </header>
+
+      <section>
+        <h2 className="mb-3 text-lg font-medium">Estructura de propiedad</h2>
+        <div className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+          {ownershipInterests.map((oi) => (
+            <div key={oi.id} className="px-4 py-3 text-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">{oi.subjectEntity.name}</p>
+                <p className="font-medium">
+                  {oi.percentage ? `${Number(oi.percentage)}%` : "—"}{" "}
+                  <span className="font-normal text-neutral-500">
+                    ({oi.owner.name === "RUC Personal — Ronald Alejandro Barrios Duarte"
+                      ? "Ronald"
+                      : oi.owner.name})
+                  </span>
+                </p>
+              </div>
+              {oi.notes && (
+                <p className="mt-1 text-xs text-amber-600">{oi.notes}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section>
         <h2 className="mb-3 text-lg font-medium">Obligaciones tributarias</h2>
