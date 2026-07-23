@@ -56,6 +56,23 @@ export default async function Home() {
     orderBy: { subjectEntity: { name: "asc" } },
   });
 
+  // FS-004: parties vinculados a alguna de las entidades accesibles.
+  const partyLinks = await prisma.partyEntityLink.findMany({
+    where: { entityId: { in: entityIds } },
+    include: { party: true, entity: true },
+    orderBy: { party: { fullName: "asc" } },
+  });
+
+  const relationshipLabels: Record<string, string> = {
+    SUPPLIER: "Proveedor",
+    CLIENT: "Cliente",
+    EXTERNAL_PARTNER: "Socio externo",
+    ATTORNEY: "Abogado",
+    BANK: "Banco",
+    FAMILY_MEMBER: "Familiar",
+    OTHER: "Otro",
+  };
+
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 p-8">
       <header className="flex items-center justify-between">
@@ -92,6 +109,34 @@ export default async function Home() {
               )}
             </div>
           ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-medium">Contactos</h2>
+        <div className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+          {partyLinks.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-neutral-500">
+              Todavía no hay contactos cargados.
+            </p>
+          ) : (
+            partyLinks.map((link) => (
+              <div
+                key={link.id}
+                className="flex items-center justify-between px-4 py-3 text-sm"
+              >
+                <div>
+                  <p className="font-medium">{link.party.fullName}</p>
+                  <p className="text-neutral-500">
+                    {relationshipLabels[link.party.relationshipType] ??
+                      link.party.relationshipType}
+                    {link.party.taxId ? ` · RUC ${link.party.taxId}` : ""}
+                  </p>
+                </div>
+                <p className="text-neutral-500">{link.entity.name}</p>
+              </div>
+            ))
+          )}
         </div>
       </section>
 

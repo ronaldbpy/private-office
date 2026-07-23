@@ -223,6 +223,30 @@ async function main() {
   });
 
   console.log("✔ Ownership cargado: 100% Axentia, 50% Amelia (el otro 50% queda como nota abierta, sin cerrar).");
+
+  // ---------------------------------------------------------------------
+  // 6) Parties (FS-004) — contactos externos, sin acceso al sistema
+  // ---------------------------------------------------------------------
+  const alexis = await prisma.party.upsert({
+    where: { id: "party-alexis-de-kermenguy" },
+    update: {},
+    create: {
+      id: "party-alexis-de-kermenguy",
+      fullName: "Alexis De Kermenguy",
+      taxId: "4416020-8",
+      relationshipType: "SUPPLIER",
+    },
+  });
+
+  await prisma.partyEntityLink.upsert({
+    where: {
+      partyId_entityId: { partyId: alexis.id, entityId: axentia.id },
+    },
+    update: {},
+    create: { partyId: alexis.id, entityId: axentia.id },
+  });
+
+  console.log("✔ Party cargado: Alexis De Kermenguy (Arquitecto, proveedor de Axentia EAS).");
 }
 
 main()
