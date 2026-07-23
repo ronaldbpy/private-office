@@ -2,16 +2,41 @@ import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/prisma";
 import { nextDueDate, daysUntil, formatDatePY } from "@/lib/dueDates";
+import { getUserAccess, accessibleEntityIds } from "@/lib/access";
 
 export default async function Home() {
   const user = await currentUser();
 
+  if (!user) {
+    // El middleware ya debería haber redirigido a /sign-in antes de esto.
+    return null;
+  }
+
+  const access = await getUserAccess(user.id);
+  const entityIds = accessibleEntityIds(access);
+
+  const today = new Date();
+
+  // Regla FS-005: un usuario sin entidades asignadas ve un estado vacío,
+  // nunca un error ni datos de otra persona.
+  if (entityIds.length === 0) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-4 p-8 text-center">
+        <h1 className="text-2xl font-light">Private Office</h1>
+        <p className="text-neutral-500">
+          Tu usuario todavía no tiene ninguna empresa asignada. Pedile al
+          Owner que te dé acceso desde la administración del sistema.
+        </p>
+        <UserButton afterSignOutUrl="/sign-in" />
+      </main>
+    );
+  }
+
   const obligations = await prisma.obligation.findMany({
+    where: { entityId: { in: entityIds } },
     include: { entity: true, dueRule: true },
     orderBy: [{ entity: { name: "asc" } }, { code: "asc" }],
   });
-
-  const today = new Date();
 
   const rows = obligations.map((ob) => {
     const due = nextDueDate(ob.code, today);
@@ -29,8 +54,10 @@ export default async function Home() {
         <div>
           <h1 className="text-3xl font-light">Private Office</h1>
           <p className="text-sm text-neutral-500">
-            Hola, {user?.firstName ?? "Ronald"}. Hoy es{" "}
-            {formatDatePY(today)}.
+            Hola, {user.firstName ?? "Ronald"}. Hoy es {formatDatePY(today)}.
+          </p>
+          <p className="text-xs text-neutral-400">
+            Acceso a: {access.map((a) => a.entityName).join(", ")}
           </p>
         </div>
         <UserButton afterSignOutUrl="/sign-in" />

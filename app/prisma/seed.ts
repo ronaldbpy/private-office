@@ -143,6 +143,45 @@ async function main() {
   console.log(
     "hasta que el contador confirme su periodicidad (regla FS-017 / AI-001).",
   );
+
+  // ---------------------------------------------------------------------
+  // 4) Acceso del Owner (FS-005) — Ronald tiene rol OWNER en las 3 entidades
+  // ---------------------------------------------------------------------
+  const OWNER_CLERK_ID = "user_3GvDXLehFYaF4fb0qQpnD73FUEM";
+
+  for (const entity of [axentia, amelia, personal]) {
+    const access = await prisma.userAccess.upsert({
+      where: {
+        clerkUserId_entityId: {
+          clerkUserId: OWNER_CLERK_ID,
+          entityId: entity.id,
+        },
+      },
+      update: {},
+      create: {
+        clerkUserId: OWNER_CLERK_ID,
+        entityId: entity.id,
+        role: "OWNER",
+      },
+    });
+
+    // Registro de auditoria del alta de acceso (regla FS-005 / DM-002)
+    const alreadyLogged = await prisma.accessChangeLog.findFirst({
+      where: { userAccessId: access.id, changeType: "created" },
+    });
+    if (!alreadyLogged) {
+      await prisma.accessChangeLog.create({
+        data: {
+          userAccessId: access.id,
+          changedBy: OWNER_CLERK_ID,
+          changeType: "created",
+          afterState: `role=OWNER, entity=${entity.name}`,
+        },
+      });
+    }
+  }
+
+  console.log("✔ Acceso OWNER asignado a Ronald en las 3 entidades.");
 }
 
 main()
