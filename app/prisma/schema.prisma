@@ -1,0 +1,178 @@
+// Private Office — Prisma Schema
+// Basado en: MD-300 (Canonical Data Model), DM-001 (Canonical Entities),
+// FS-003 (Group/Ownership), FS-004 (Parties), FS-005 (Identity/Roles), FS-017 (Calendar/Alerts).
+//
+// v1: modela lo mínimo necesario para las FS ya cerradas.
+// No incluye todavía: Treasury (FS-006), Vault metadata (FS-016), Timeline (FS-002).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// CORE — Entidades legales y perfil personal (MD-200, FS-003)
+// ---------------------------------------------------------------------------
+
+enum EntityType {
+  LEGAL_ENTITY // ej: Axentia EAS, Casa Amelia EAS
+  PERSONAL_PROFILE // ej: RUC personal de Ronald
+}
+
+model Entity {
+  id           String     @id @default(uuid())
+  name         String // ej: "Axentia EAS"
+  type         EntityType
+  taxId        String? // RUC
+  jurisdiction String? // ej: "Paraguay"
+  baseCurrency String? // ISO 4217, ej: "PYG"
+  status       String     @default("active") // active | suspended | closed (MD-300 invariant: nunca se borra)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  userAccess   UserAccess[]
+  partyLinks   PartyEntityLink[]
+  obligations  Obligation[]
+
+  @@map("entities")
+}
+
+// ---------------------------------------------------------------------------
+// IDENTITY, ROLES & ACCESS (FS-005)
+// El usuario real (login, MFA) vive en Clerk. Acá solo guardamos el vínculo:
+// qué clerkUserId tiene qué rol en qué Entity. Es la fuente de autorización
+// que la API consulta en cada request — nunca se confía solo en Clerk.
+// ---------------------------------------------------------------------------
+
+enum Role {
+  OWNER
+  CONTADOR
+  ASISTENTE
+  GERENTE
+}
+
+model UserAccess {
+  id          String   @id @default(uuid())
+  clerkUserId String // id de usuario que da Clerk
+  role        Role
+  entityId    String
+  entity      Entity   @relation(fields: [entityId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Auditoría de cambios de acceso (regla FS-005 / DM-002)
+  accessChanges AccessChangeLog[]
+
+  @@unique([clerkUserId, entityId]) // un usuario tiene un solo rol por entidad
+  @@map("user_access")
+}
+
+model AccessChangeLog {
+  id           String     @id @default(uuid())
+  userAccessId String
+  userAccess   UserAccess @relation(fields: [userAccessId], references: [id])
+  changedBy    String // clerkUserId de quien hizo el cambio (siempre debería ser el Owner)
+  changeType   String // "created" | "role_changed" | "revoked"
+  beforeState  String? // snapshot simple en texto/JSON
+  afterState   String?
+  occurredAt   DateTime   @default(now())
+
+  @@map("access_change_log")
+}
+
+// ---------------------------------------------------------------------------
+// PARTIES & RELATIONSHIPS (FS-004) — contactos externos sin login
+// ---------------------------------------------------------------------------
+
+enum RelationshipType {
+  SUPPLIER
+  CLIENT
+  EXTERNAL_PARTNER
+  ATTORNEY
+  BANK
+  FAMILY_MEMBER
+  OTHER
+}
+
+model Party {
+  id               String           @id @default(uuid())
+  fullName         String
+  taxId            String? // cédula o RUC
+  phone            String?
+  email            String?
+  address          String?
+  relationshipType RelationshipType
+  status           String           @default("active") // active | archived (nunca se borra si tiene vínculos)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  bankingDetails   PartyBankingDetails?
+  entityLinks      PartyEntityLink[]
+
+  @@map("parties")
+}
+
+// Datos bancarios separados: clasificación Restricted (SEC-001) —
+// se consulta aparte, nunca viene incluido en una consulta general de Party.
+model PartyBankingDetails {
+  id            String   @id @default(uuid())
+  partyId       String   @unique
+  party         Party    @relation(fields: [partyId], references: [id])
+  bankName      String?
+  accountNumber String?
+  accountType   String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("party_banking_details")
+}
+
+// Un Party puede estar vinculado a varias Entity a la vez (regla FS-004)
+model PartyEntityLink {
+  id        String   @id @default(uuid())
+  partyId   String
+  party     Party    @relation(fields: [partyId], references: [id])
+  entityId  String
+  entity    Entity   @relation(fields: [entityId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([partyId, entityId])
+  @@map("party_entity_links")
+}
+
+// ---------------------------------------------------------------------------
+// CALENDAR, TASKS & ALERTS (FS-017) — obligaciones tributarias
+// ---------------------------------------------------------------------------
+
+model Obligation {
+  id         String    @id @default(uuid())
+  entityId   String
+  entity     Entity    @relation(fields: [entityId], references: [id])
+  code       String // ej: "211", "700", "954"
+  name       String // ej: "IVA General"
+  activeSince DateTime // fecha de alta ante la SET, NO es vencimiento
+  createdAt  DateTime  @default(now())
+
+  dueRule    ObligationDueRule?
+
+  @@unique([entityId, code])
+  @@map("obligations")
+}
+
+// Regla de vencimiento recurrente — SEPARADA del registro de la obligación.
+// confirmed = false significa "vencimiento sin confirmar" (regla AI-001:
+// nunca se calcula ni se asume, se muestra como pendiente).
+model ObligationDueRule {
+  id           String     @id @default(uuid())
+  obligationId String     @unique
+  obligation   Obligation @relation(fields: [obligationId], references: [id])
+  ruleText     String? // ej: "Día 8 de cada mes" / "8 de abril, anual"
+  confirmed    Boolean    @default(false)
+  confirmedBy  String? // "owner" | "contador" | nombre de quien confirmó
+  updatedAt    DateTime   @updatedAt
+
+  @@map("obligation_due_rules")
+}
