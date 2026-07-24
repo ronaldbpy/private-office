@@ -223,10 +223,14 @@ async function main() {
 
   // ---------------------------------------------------------------------
   // 4) Acceso del Owner (FS-005) — Ronald tiene rol OWNER en las 3 entidades
+  // originales + las 6 empresas del grupo constructor. Ronald es el
+  // inversionista/owner en todas, aunque en las 6 nuevas la propiedad
+  // formal la sostenga Axentia EAS (ver ADR-006) — acceso operativo al
+  // sistema es independiente de quién figura como titular societario.
   // ---------------------------------------------------------------------
   const OWNER_CLERK_ID = "user_3GvDXLehFYaF4fb0qQpnD73FUEM";
 
-  for (const entity of [axentia, amelia, personal]) {
+  for (const entity of [axentia, amelia, personal, ...constructionCos]) {
     const access = await prisma.userAccess.upsert({
       where: {
         clerkUserId_entityId: {
@@ -258,7 +262,7 @@ async function main() {
     }
   }
 
-  console.log("✔ Acceso OWNER asignado a Ronald en las 3 entidades.");
+  console.log("✔ Acceso OWNER asignado a Ronald en las 3 entidades originales + las 6 empresas del grupo constructor.");
 
   // ---------------------------------------------------------------------
   // 5) Ownership (FS-003) — solo se registran hechos YA consumados.

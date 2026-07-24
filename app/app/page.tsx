@@ -49,10 +49,12 @@ export default async function Home() {
   });
 
   // FS-003: participaciones donde la entidad "sujeto" es una de las
-  // entidades a las que este usuario tiene acceso.
+  // entidades a las que este usuario tiene acceso. El owner puede ser una
+  // Entity (ej: Axentia EAS) o un Party externo sin login (ej: Alexis de
+  // Kermenguy) — hay que traer ambos.
   const ownershipInterests = await prisma.ownershipInterest.findMany({
     where: { subjectEntityId: { in: entityIds } },
-    include: { owner: true, subjectEntity: true },
+    include: { owner: true, ownerParty: true, subjectEntity: true },
     orderBy: { subjectEntity: { name: "asc" } },
   });
 
@@ -62,6 +64,16 @@ export default async function Home() {
     include: { party: true, entity: true },
     orderBy: { party: { fullName: "asc" } },
   });
+
+  // Agrupar participaciones por empresa (ahora una empresa puede tener
+  // varios owners a la vez, ej: Axentia EAS 50% + Alexis De Kermenguy 50%).
+  const ownershipByEntity = new Map<string, typeof ownershipInterests>();
+  for (const oi of ownershipInterests) {
+    const key = oi.subjectEntity.id;
+    const list = ownershipByEntity.get(key) ?? [];
+    list.push(oi);
+    ownershipByEntity.set(key, list);
+  }
 
   const relationshipLabels: Record<string, string> = {
     SUPPLIER: "Proveedor",
@@ -91,24 +103,52 @@ export default async function Home() {
       <section>
         <h2 className="mb-3 text-lg font-medium">Estructura de propiedad</h2>
         <div className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
-          {ownershipInterests.map((oi) => (
-            <div key={oi.id} className="px-4 py-3 text-sm">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{oi.subjectEntity.name}</p>
-                <p className="font-medium">
-                  {oi.percentage ? `${Number(oi.percentage)}%` : "—"}{" "}
-                  <span className="font-normal text-neutral-500">
-                    ({oi.owner.name === "RUC Personal — Ronald Alejandro Barrios Duarte"
-                      ? "Ronald"
-                      : oi.owner.name})
-                  </span>
-                </p>
+          {Array.from(ownershipByEntity.values()).map((interests) => {
+            const entity = interests[0].subjectEntity;
+            const notesText = interests.find((oi) => oi.notes)?.notes;
+            return (
+              <div key={entity.id} className="px-4 py-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{entity.name}</p>
+                  {entity.status === "pending_incorporation" && (
+                    <span className="rounded-full border border-amber-600/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-600">
+                      Pendiente de constitución
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {interests.map((oi) => {
+                    const ownerName =
+                      oi.owner?.name ===
+                      "RUC Personal — Ronald Alejandro Barrios Duarte"
+                        ? "Ronald"
+                        : (oi.owner?.name ?? oi.ownerParty?.fullName ?? "—");
+                    return (
+                      <div
+                        key={oi.id}
+                        className="flex items-center justify-between text-neutral-500"
+                      >
+                        <span>
+                          {ownerName}
+                          {oi.verificationState === "unverified" && (
+                            <span className="ml-1 text-amber-600">
+                              (sin verificar)
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-medium text-neutral-900">
+                          {oi.percentage ? `${Number(oi.percentage)}%` : "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {notesText && (
+                  <p className="mt-2 text-xs text-amber-600">{notesText}</p>
+                )}
               </div>
-              {oi.notes && (
-                <p className="mt-1 text-xs text-amber-600">{oi.notes}</p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
