@@ -47,6 +47,82 @@ async function main() {
     },
   });
 
+  // -----------------------------------------------------------------------
+  // 1.b) Grupo constructor por crear (sesión 2026-07-24) — 6 empresas nuevas,
+  // 50% Axentia EAS / 50% Alexis de Kermenguy. Ninguna tiene RUC todavía;
+  // se registran con status "pending_incorporation" y datos de contacto
+  // genéricos/placeholder hasta que exista constitución legal real.
+  // Decisión de estructura: ver ADR-006 (Axentia como holding operativa
+  // del grupo constructor, no participación personal directa de Ronald).
+  // -----------------------------------------------------------------------
+  const GENERIC_ADDRESS = "Asunción, Paraguay (dirección pendiente de confirmar)";
+  const GENERIC_PHONE = "+595 21 000 0000";
+
+  const constructionCosData = [
+    {
+      id: "adkb-arquitectura",
+      name: "+adkb. Arquitectura & Compañía",
+      taxId: "90000001-1",
+      email: "contacto@adkb.com.py",
+    },
+    {
+      id: "espace-constructora",
+      name: "Espace Constructora",
+      taxId: "90000002-2",
+      email: "contacto@espace.com.py",
+    },
+    {
+      id: "3-1-albanileria-hormigon",
+      name: "3:1. Albañilería & Hormigón",
+      taxId: "90000003-3",
+      email: "contacto@3-1.com.py",
+    },
+    {
+      id: "luz-agua-instalaciones",
+      name: "Luz & Agua Instalaciones",
+      taxId: "90000004-4",
+      email: "contacto@luzyagua.com.py",
+    },
+    {
+      id: "moopa-clean",
+      name: "Moopa Clean",
+      taxId: "90000005-5",
+      email: "contacto@moopaclean.com.py",
+    },
+    {
+      id: "arte-pantone",
+      name: "arte&pantone",
+      taxId: "90000006-6",
+      email: "contacto@artepantone.com.py",
+    },
+  ];
+
+  const constructionCos = [];
+  for (const co of constructionCosData) {
+    const created = await prisma.entity.upsert({
+      where: { id: co.id },
+      update: {},
+      create: {
+        id: co.id,
+        name: co.name,
+        type: "LEGAL_ENTITY",
+        taxId: co.taxId, // placeholder genérico — reemplazar cuando la SET emita el RUC real
+        jurisdiction: "Paraguay",
+        baseCurrency: "PYG",
+        address: GENERIC_ADDRESS,
+        phone: GENERIC_PHONE,
+        email: co.email, // placeholder genérico
+        status: "pending_incorporation",
+      },
+    });
+    constructionCos.push(created);
+  }
+
+  console.log(
+    "✔ 6 empresas del grupo constructor creadas (pending_incorporation, datos placeholder):",
+    constructionCos.map((c) => c.name).join(", "),
+  );
+
   console.log("✔ Entidades creadas:", axentia.name, amelia.name, personal.name);
 
   // ---------------------------------------------------------------------
@@ -229,12 +305,12 @@ async function main() {
   // ---------------------------------------------------------------------
   const alexis = await prisma.party.upsert({
     where: { id: "party-alexis-de-kermenguy" },
-    update: {},
+    update: { relationshipType: "EXTERNAL_PARTNER" }, // actualizado 2026-07-24: pasa de proveedor a socio operativo 50% en 6 empresas
     create: {
       id: "party-alexis-de-kermenguy",
       fullName: "Alexis De Kermenguy",
       taxId: "4416020-8",
-      relationshipType: "SUPPLIER",
+      relationshipType: "EXTERNAL_PARTNER",
     },
   });
 
@@ -246,7 +322,63 @@ async function main() {
     create: { partyId: alexis.id, entityId: axentia.id },
   });
 
-  console.log("✔ Party cargado: Alexis De Kermenguy (Arquitecto, proveedor de Axentia EAS).");
+  console.log("✔ Party cargado: Alexis De Kermenguy (socio externo 50%, ex-proveedor de Axentia EAS).");
+
+  // ---------------------------------------------------------------------
+  // 7) Ownership del grupo constructor (sesión 2026-07-24) — FS-003.
+  // 50% Axentia EAS (Entity) + 50% Alexis de Kermenguy (Party) en cada una
+  // de las 6 empresas. verificationState = "unverified" porque ninguna
+  // tiene todavía constitución legal ni RUC real (regla MD-000 #3: la
+  // decisión de split ya está tomada por el owner, pero el hecho societario
+  // formal aún no existe — se marca como no verificado, no como inventado).
+  // ---------------------------------------------------------------------
+  const STRUCTURE_DECISION_DATE = new Date("2026-07-24");
+
+  for (const co of constructionCos) {
+    await prisma.partyEntityLink.upsert({
+      where: { partyId_entityId: { partyId: alexis.id, entityId: co.id } },
+      update: {},
+      create: { partyId: alexis.id, entityId: co.id },
+    });
+
+    await prisma.ownershipInterest.upsert({
+      where: { id: `ownership-axentia-${co.id}` },
+      update: {},
+      create: {
+        id: `ownership-axentia-${co.id}`,
+        ownerId: axentia.id,
+        subjectEntityId: co.id,
+        interestType: "equity",
+        percentage: 50.0,
+        effectiveFrom: STRUCTURE_DECISION_DATE,
+        verificationState: "unverified",
+        notes:
+          `Estructura acordada por el owner el 2026-07-24: Axentia EAS 50% / Alexis de Kermenguy 50% en ${co.name}. ` +
+          "Pendiente constitución legal (EAS) y RUC ante la SET. Pasa a 'verified' cuando se firme el acta constitutiva.",
+      },
+    });
+
+    await prisma.ownershipInterest.upsert({
+      where: { id: `ownership-alexis-${co.id}` },
+      update: {},
+      create: {
+        id: `ownership-alexis-${co.id}`,
+        ownerPartyId: alexis.id,
+        subjectEntityId: co.id,
+        interestType: "equity",
+        percentage: 50.0,
+        effectiveFrom: STRUCTURE_DECISION_DATE,
+        verificationState: "unverified",
+        notes:
+          `Estructura acordada por el owner el 2026-07-24: Alexis de Kermenguy 50% / Axentia EAS 50% en ${co.name}. ` +
+          "Pendiente constitución legal (EAS) y RUC ante la SET. Pasa a 'verified' cuando se firme el acta constitutiva.",
+      },
+    });
+  }
+
+  console.log(
+    "✔ Ownership 50/50 (Axentia / Alexis) cargado para las 6 empresas del grupo constructor (unverified, pendiente constitución legal).",
+  );
 }
 
 main()

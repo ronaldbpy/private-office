@@ -27,10 +27,13 @@ model Entity {
   id           String     @id @default(uuid())
   name         String // ej: "Axentia EAS"
   type         EntityType
-  taxId        String? // RUC
+  taxId        String? // RUC — puede ser un placeholder genérico mientras status = pending_incorporation
   jurisdiction String? // ej: "Paraguay"
   baseCurrency String? // ISO 4217, ej: "PYG"
-  status       String     @default("active") // active | suspended | closed (MD-300 invariant: nunca se borra)
+  address      String? // dirección legal/fiscal — puede ser genérica hasta confirmar con la constitución
+  phone        String? // contacto genérico hasta confirmar dato real
+  email        String? // contacto genérico hasta confirmar dato real
+  status       String     @default("active") // active | pending_incorporation | suspended | closed (MD-300 invariant: nunca se borra)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -114,6 +117,7 @@ model Party {
 
   bankingDetails   PartyBankingDetails?
   entityLinks      PartyEntityLink[]
+  ownedInterests   OwnershipInterest[] @relation("PartyOwnerOf") // participaciones que este Party posee sobre entidades del Grupo (DM-001: Party puede jugar rol "owner")
 
   @@map("parties")
 }
@@ -185,8 +189,19 @@ model ObligationDueRule {
 
 model OwnershipInterest {
   id                String    @id @default(uuid())
-  ownerId           String // quién posee (hoy: el perfil personal de Ronald)
-  owner             Entity    @relation("OwnerOf", fields: [ownerId], references: [id])
+
+  // El owner de una participación puede ser una Entity del Grupo (otra
+  // empresa, o el perfil personal de Ronald) O un Party externo (ej: un
+  // socio persona física sin login, como Alexis de Kermenguy). Exactamente
+  // uno de los dos debe estar poblado — no hay constraint de base de datos
+  // para esto todavía (se usa `db push`, sin migraciones formales); se
+  // valida a nivel de aplicación/seed. Base: DM-001 (Party puede jugar rol
+  // "owner") + FS-003.
+  ownerId           String?
+  owner             Entity?   @relation("OwnerOf", fields: [ownerId], references: [id])
+  ownerPartyId      String?
+  ownerParty        Party?    @relation("PartyOwnerOf", fields: [ownerPartyId], references: [id])
+
   subjectEntityId   String // sobre qué entidad es la participación
   subjectEntity     Entity    @relation("OwnedBy", fields: [subjectEntityId], references: [id])
   interestType      String    @default("equity") // equity | economic_rights | voting_control
