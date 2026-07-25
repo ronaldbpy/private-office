@@ -53,20 +53,27 @@ directorio, y revisá `git status`/`git log` al empezar.
   `lsof -i :3000` / `ps -ef | grep next-server` y matarlos a mano — puede
   quedar un `next-server` corriendo sin que el `npm run dev` padre lo sepa.
 
-## ⚠️ Si `npm install` deja de instalar paquetes sin avisar
+## ⚠️ `npm install` instala paquetes de menos (silenciosamente) — CAUSA RAÍZ ENCONTRADA
 
-El 2026-07-25 un `npm install -D <paquete>` corrompió silenciosamente la
-instalación: `npm ls` y los logs decían "up to date" mientras
-`@types/node`/`@types/react`/`@types/react-dom` faltaban por completo en
-disco (el propio `tsc` tiraba cientos de errores de "Cannot find module").
-`npm cache verify` encontró 150 entradas de caché corruptas, pero ni
-limpiarla ni reinstalar desde cero (`rm -rf node_modules package-lock.json
-&& npm install`) lo resolvió — npm seguía sin escribir esos paquetes al
-disco pese a decir que sí. Lo que SÍ lo arregló: **`npm run dev`** (el
-propio Next.js detectó los tipos faltantes y los reinstaló por su cuenta
-con su propio mecanismo, instalando ~330 paquetes correctamente donde `npm
-install` manual solo llegaba a ~70). Si vuelve a pasar algo similar: probar
-`npm run dev` antes de seguir peleando con `npm install` a mano.
+Este equipo tiene **`NODE_ENV=production` seteado a nivel de sistema/shell**
+(no en ningún dotfile del proyecto — revisar con `echo $NODE_ENV`; Next.js ya
+avisa esto como "non-standard NODE_ENV" en cada arranque). Con eso seteado,
+`npm install` aplica su default `--omit=dev` **silenciosamente**: no avisa,
+no tira error, simplemente no instala ninguna devDependency ni nada que
+solo se necesite transitivamente desde una devDependency.
+
+Esto rompió dos cosas reales el 2026-07-25:
+- `@types/node`, `@types/react`, `@types/react-dom` (devDependencies
+  directas) — `tsc` tiraba cientos de "Cannot find module".
+- `lightningcss` (solo necesario vía `@tailwindcss/postcss`, que es
+  devDependency) — la app crasheaba al renderizar `globals.css` con
+  `Cannot find module '../lightningcss.darwin-arm64.node'`.
+
+**Solución: siempre instalar con `npm install --include=dev`** (no alcanza
+con un `npm install` normal mientras esa variable de entorno siga seteada).
+No se tocó la variable de entorno del sistema — puede estar ahí por otra
+razón ajena a este proyecto; el flag es la forma segura de evitar el
+problema sin tocar nada fuera de este repo.
 
 ## Arquitectura vigente que conviene conocer antes de tocar código
 
