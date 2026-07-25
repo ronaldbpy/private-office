@@ -315,7 +315,10 @@ async function main() {
 
   await prisma.ownershipInterest.upsert({
     where: { id: "ownership-ronald-amelia" },
-    update: {},
+    update: {
+      notes:
+        "Tramo inicial del 50%. El 50% restante quedó cerrado el 2026-07-24 — ver ownership-ronald-amelia-tramo2 (juntos, Ronald es dueño del 100% de Casa Amelia EAS).",
+    },
     create: {
       id: "ownership-ronald-amelia",
       ownerId: personal.id,
@@ -326,11 +329,39 @@ async function main() {
       verificationState: "verified",
       approvedBy: "owner",
       notes:
-        "Negociado un 50% adicional (llegar\u00eda a 100%). Pendiente cierre documental — no se registra como participación hasta confirmarse formalmente.",
+        "Tramo inicial del 50%. El 50% restante quedó cerrado el 2026-07-24 — ver ownership-ronald-amelia-tramo2 (juntos, Ronald es dueño del 100% de Casa Amelia EAS).",
     },
   });
 
-  console.log("✔ Ownership cargado: 100% Axentia, 50% Amelia (el otro 50% queda como nota abierta, sin cerrar).");
+  // Cierre del 50% restante (sesión 2026-07-25) — confirmado por el owner:
+  // Casa Amelia EAS pasa a ser 100% de Ronald. Se registra como un SEGUNDO
+  // tramo, no como edición del original: la regla DM-002 pide preservar el
+  // hecho anterior (el 50% inicial fue real en su momento) y sumar el nuevo
+  // hecho, no sobrescribir. verificationState="verified" con approvedBy="owner"
+  // sigue el mismo criterio que el tramo inicial: el owner es la fuente de
+  // verdad directa de sus propios hechos económicos (a diferencia de las 6
+  // empresas del grupo constructor, donde lo pendiente es un trámite de un
+  // tercero — la SET — no una declaración del owner).
+  const AMELIA_CLOSING_DATE = new Date("2026-07-24");
+
+  await prisma.ownershipInterest.upsert({
+    where: { id: "ownership-ronald-amelia-tramo2" },
+    update: {},
+    create: {
+      id: "ownership-ronald-amelia-tramo2",
+      ownerId: personal.id,
+      subjectEntityId: amelia.id,
+      interestType: "equity",
+      percentage: 50.0,
+      effectiveFrom: AMELIA_CLOSING_DATE,
+      verificationState: "verified",
+      approvedBy: "owner",
+      notes:
+        "Cierre del 50% restante, confirmado por el owner. Junto con ownership-ronald-amelia (tramo inicial), Casa Amelia EAS queda 100% de Ronald. Pendiente vincular el documento de transferencia en el Vault (FS-016) cuando esté disponible.",
+    },
+  });
+
+  console.log("✔ Ownership cargado: 100% Axentia, 100% Amelia (2 tramos: 50% inicial + 50% cerrado el 2026-07-24).");
 
   // ---------------------------------------------------------------------
   // 6) Parties (FS-004) — contactos externos, sin acceso al sistema

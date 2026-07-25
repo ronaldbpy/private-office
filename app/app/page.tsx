@@ -168,6 +168,35 @@ export default async function Home() {
         {Array.from(ownershipByEntity.values()).map((interests) => {
           const entity = interests[0].subjectEntity;
           const notesText = interests.find((oi) => oi.notes)?.notes;
+
+          // Sumar tramos del mismo dueño dentro de la misma empresa (ej:
+          // Ronald 50% inicial + 50% cerrado después = 100%, una sola fila).
+          // Si CUALQUIER tramo de ese dueño está sin verificar, la fila
+          // combinada se marca sin verificar (conservador: no mostrar una
+          // cifra como confirmada si parte de ella no lo está).
+          const byOwner = new Map<
+            string,
+            { name: string; percentage: number; unverified: boolean }
+          >();
+          for (const oi of interests) {
+            const key = oi.ownerId ?? oi.ownerPartyId ?? oi.id;
+            const rawName =
+              oi.owner?.name ?? oi.ownerParty?.fullName ?? "—";
+            const name =
+              rawName === "RUC Personal — Ronald Alejandro Barrios Duarte"
+                ? "Ronald"
+                : rawName;
+            const existing = byOwner.get(key);
+            const pct = oi.percentage ? Number(oi.percentage) : 0;
+            byOwner.set(key, {
+              name,
+              percentage: (existing?.percentage ?? 0) + pct,
+              unverified:
+                (existing?.unverified ?? false) ||
+                oi.verificationState === "unverified",
+            });
+          }
+
           return (
             <div key={entity.id} className="px-5 py-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -179,31 +208,24 @@ export default async function Home() {
                 )}
               </div>
               <div className="mt-2 flex flex-col gap-1">
-                {interests.map((oi) => {
-                  const ownerName =
-                    oi.owner?.name ===
-                    "RUC Personal — Ronald Alejandro Barrios Duarte"
-                      ? "Ronald"
-                      : (oi.owner?.name ?? oi.ownerParty?.fullName ?? "—");
-                  return (
-                    <div
-                      key={oi.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-text-secondary">
-                        {ownerName}
-                        {oi.verificationState === "unverified" && (
-                          <span className="ml-1.5">
-                            <Badge tone="neutral">Sin verificar</Badge>
-                          </span>
-                        )}
-                      </span>
-                      <span className="tabular font-medium text-text-primary">
-                        {oi.percentage ? `${Number(oi.percentage)}%` : "—"}
-                      </span>
-                    </div>
-                  );
-                })}
+                {Array.from(byOwner.values()).map((owner) => (
+                  <div
+                    key={owner.name}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="text-text-secondary">
+                      {owner.name}
+                      {owner.unverified && (
+                        <span className="ml-1.5">
+                          <Badge tone="neutral">Sin verificar</Badge>
+                        </span>
+                      )}
+                    </span>
+                    <span className="tabular font-medium text-text-primary">
+                      {owner.percentage}%
+                    </span>
+                  </div>
+                ))}
               </div>
               {notesText && (
                 <p className="mt-2.5 text-xs leading-relaxed text-warning">
