@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Private Office — app
 
-## Getting Started
+Implementación en código del [Private Office Documentation Pack](../docs/README.md)
+(el conjunto de documentos MD/FS/ADR/etc. es la fuente de verdad del producto
+— ver [ADR-001](../docs/06_ADR/ADR-001_DOCUMENTATION_AS_SOURCE_OF_TRUTH.md)).
+No se debe implementar nada acá que contradiga esos documentos sin antes
+actualizarlos.
 
-First, run the development server:
+**Antes de tocar código con un agente de IA (Claude Code, Cursor, etc.), leé
+[`CLAUDE.md`](./CLAUDE.md)** — tiene decisiones técnicas fijadas y errores
+comunes ya resueltos que ahorran tiempo real.
+
+## Stack
+
+- Next.js 16 (App Router, Turbopack) + TypeScript + Tailwind CSS v4
+- Prisma 6.x + PostgreSQL (Render)
+- Clerk (autenticación — ver [ADR-004](../docs/06_ADR/ADR-004_IDENTITY_PROVIDER_SELECTION.md))
+
+## Primeros pasos
 
 ```bash
+npm install
+cp .env.example .env.local   # completar con las credenciales reales (Clerk + DATABASE_URL)
+npx prisma db push           # sincroniza el schema con la base (NO usar `migrate dev` — ver CLAUDE.md)
+npx prisma db seed           # carga los datos base del Grupo (entidades, ownership, accesos)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Gotcha frecuente:** después de cualquier cambio a `prisma/schema.prisma`
+hay que reiniciar `npm run dev` (`Ctrl+C` y de nuevo) — el servidor mantiene
+el cliente de Prisma viejo en memoria. Detalle completo en `CLAUDE.md`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Qué hay implementado hoy
 
-## Learn More
+- **FS-003** Estructura de propiedad (holdings, participaciones, cascada de
+  acceso — ver [ADR-006](../docs/06_ADR/ADR-006_CONSTRUCTION_GROUP_HOLDING_STRUCTURE.md)
+  y [ADR-007](../docs/06_ADR/ADR-007_CASCADING_HOLDING_ACCESS.md)).
+- **FS-004** Contactos (parties externos, sin login).
+- **FS-005** Identidad, roles y acceso (`lib/access.ts`).
+- **FS-016** Vault — subida/descarga de documentos con control de acceso.
+  Storage v1 es disco local (`.vault-storage/`, gitignored) — placeholder
+  deliberado hasta decidir un object storage real por ADR.
+- **FS-017** Obligaciones tributarias, agrupadas por código de vencimiento.
+- **FS-001 / FS-002** (versiones livianas) Cola de atención y actividad
+  reciente, ambas derivadas de datos ya existentes, sin tablas nuevas.
 
-To learn more about Next.js, take a look at the following resources:
+## Estructura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/            rutas (App Router) — page.tsx, api/, sign-in/
+components/     componentes de cliente reutilizables
+lib/            acceso, Prisma client, utilidades de fecha, Vault storage
+prisma/         schema.prisma, seed.ts, prisma.config.ts
+```
