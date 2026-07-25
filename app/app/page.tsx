@@ -177,10 +177,13 @@ export default async function Home() {
   });
 
   // FS-016: documentos vinculados a alguna de las entidades accesibles.
+  // Limitado a los últimos 20 — evita una lista sin techo a medida que se
+  // suban más documentos; cuando haga falta más, esto pasa a paginación real.
   const documents = await prisma.document.findMany({
     where: { entityLinks: { some: { entityId: { in: entityIds } } } },
     include: { entityLinks: { include: { entity: true } } },
     orderBy: { createdAt: "desc" },
+    take: 20,
   });
   const vaultDocuments = documents.map((d) => ({
     id: d.id,

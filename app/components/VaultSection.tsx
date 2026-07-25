@@ -19,6 +19,11 @@ const classificationLabels: Record<string, string> = {
   PUBLIC: "Público",
 };
 
+// Mismo límite que app/api/vault/upload/route.ts — chequeo en el cliente
+// para feedback inmediato, pero el server SIEMPRE vuelve a validar (nunca
+// se confía en el cliente, regla SEC-001).
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+
 export function VaultSection({
   entities,
   documents,
@@ -33,6 +38,15 @@ export function VaultSection({
 
   async function handleSubmit(formData: FormData) {
     setError(null);
+
+    const file = formData.get("file");
+    if (file instanceof File && file.size > MAX_FILE_SIZE_BYTES) {
+      setError(
+        `El archivo pesa ${(file.size / 1024 / 1024).toFixed(1)}MB. El límite actual es ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB.`,
+      );
+      return;
+    }
+
     const res = await fetch("/api/vault/upload", {
       method: "POST",
       body: formData,

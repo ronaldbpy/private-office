@@ -12,6 +12,14 @@ const VALID_CLASSIFICATIONS = [
   "PUBLIC",
 ] as const;
 
+// Límite de tamaño — el storage v1 es disco local del servidor (ver
+// lib/vault.ts), así que hay que cuidar el disco activamente en vez de
+// confiar en un límite impuesto por una plataforma de hosting. 25MB cubre
+// cómodamente PDFs escaneados, contratos, fotos de documentos; archivos más
+// grandes (videos, planos CAD) van a necesitar el object storage real
+// pendiente de decidir (ver nota en schema.prisma).
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) {
@@ -45,6 +53,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "No tenés acceso a esa empresa." },
       { status: 403 },
+    );
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return NextResponse.json(
+      {
+        error: `El archivo pesa ${(file.size / 1024 / 1024).toFixed(1)}MB. El límite actual es ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB (storage local — ver nota en schema.prisma sobre object storage real).`,
+      },
+      { status: 413 },
     );
   }
 
