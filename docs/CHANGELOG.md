@@ -2,6 +2,22 @@
 
 All notable changes to the Private Office Documentation Pack are recorded here.
 
+## [1.2.0] - 2026-07-25
+
+### Added
+
+- ADR-006 — Construction Group Holding Structure (Accepted): Axentia EAS holds the owner's 50% in the six new construction-group entities, not the owner personally.
+- ADR-007 — Cascading Holding Access (Accepted): a holding-scoped `UserAccess` grant extends automatically to its subsidiaries; added Socio Operativo and Administrador Holding roles.
+- ADR-008 — Custom Access Table Instead of Clerk Organizations (Accepted): documents that the implemented access model diverges from FS-005's original Clerk-Organizations design, and why that deviation is being kept.
+
+### Changed
+
+- FS-005 — Identity, Roles & Access bumped to 1.1.0: reconciled with the actual implementation (custom `UserAccess` table, cascading access, two additional roles) per ADR-007 and ADR-008.
+
+### Notes
+
+- ADR-008 is a retroactive documentation of an existing deviation found during a code/spec review, not a new architectural proposal — the custom access table already existed and is being kept as-is.
+
 ## [1.1.0] - 2026-07-23
 
 ### Added

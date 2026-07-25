@@ -2,10 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Version | 1.0.0 |
+| Version | 1.1.0 |
 | Status | Draft |
 | Owner | Private Office |
-| Last updated | 2026-07-23 |
+| Last updated | 2026-07-25 |
 | Depends on | MD-200, MD-250, MD-300, MD-800, SEC-001, FS-003, ADR-004 |
 
 ## Purpose
@@ -18,11 +18,25 @@ Covers roles, manual user provisioning, entity-scoped access assignment, MFA pol
 
 ## Requirements / Decisions
 
-- **Roles:** Owner, Contador, Asistente, Gerente. Gerente is currently defined only for Casa Amelia EAS; it is a full-access role scoped to that single entity.
+- **Roles:** Owner, Contador, Asistente, Gerente, and (since ADR-007)
+  Socio Operativo and Administrador Holding. Gerente is currently defined
+  only for Casa Amelia EAS; it is a full-access role scoped to that single
+  entity. Socio Operativo is for an equity-holding operating partner
+  without holding-wide administrative scope; Administrador Holding is for
+  a person who administers a holding and, by cascade, its subsidiaries.
 - **Access model:** every user has exactly one role plus an explicit list of assigned entities (legal entities and/or the owner's personal profile). A user sees only data belonging to assigned entities.
 - **Multiple Contador users:** the system supports several concurrent Contador users, each with a distinct set of assigned entities, as the group grows and different companies may use different accountants.
 - **Provisioning:** manual only. No self-registration. Only the Owner can create a user, set their role, and assign their entities, through system administration.
-- **Identity provider:** Clerk (see ADR-004). Each legal entity and the personal profile is modeled as a Clerk Organization. Role and entity assignment are enforced at the Private Office API layer, not trusted solely from client-side claims.
+- **Identity provider:** Clerk (see ADR-004). Access is scoped through a
+  custom `UserAccess` table (`clerkUserId`, `role`, `entityId`) resolved
+  server-side, **not** through Clerk Organizations — see ADR-008 for why
+  this deviates from the originally-drafted approach. Role and entity
+  assignment are enforced at the Private Office API layer, not trusted
+  solely from client-side claims.
+- **Cascading access (see ADR-007):** a user's access grant on a holding
+  entity can automatically extend to every entity that holding owns
+  (`OwnershipInterest`), one level deep. This is additive to the base model
+  above, not a replacement for explicit per-entity grants.
 
 ## Rules and constraints
 
@@ -50,3 +64,4 @@ Covers roles, manual user provisioning, entity-scoped access assignment, MFA pol
 | Version | Date | Change |
 |---|---|---|
 | 1.0.0 | 2026-07-23 | Initial draft from working session with the owner. |
+| 1.1.0 | 2026-07-25 | Reconciled with actual implementation: access model is a custom `UserAccess` table, not Clerk Organizations (ADR-008); added Socio Operativo and Administrador Holding roles and cascading access (ADR-007). |
