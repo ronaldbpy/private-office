@@ -307,7 +307,7 @@ export default async function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10 sm:px-8">
       <header className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">
             Private Office
           </p>
@@ -333,7 +333,9 @@ export default async function Home() {
             ))}
           </div>
         </div>
-        <UserButton />
+        <span className="shrink-0">
+          <UserButton />
+        </span>
       </header>
 
       {attentionItems.length > 0 && (
@@ -341,29 +343,33 @@ export default async function Home() {
           {attentionItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between gap-3 px-5 py-3.5"
+              className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 py-3.5"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
                 {item.colorToken !== undefined && (
-                  <EntityDot name="" colorToken={item.colorToken ?? null} />
+                  <span className="mt-1">
+                    <EntityDot name="" colorToken={item.colorToken ?? null} />
+                  </span>
                 )}
                 <p className="text-sm text-text-primary">{item.text}</p>
               </div>
-              <Badge
-                tone={
-                  item.severity === "high"
-                    ? "danger"
+              <span className="shrink-0">
+                <Badge
+                  tone={
+                    item.severity === "high"
+                      ? "danger"
+                      : item.severity === "normal"
+                        ? "warning"
+                        : "neutral"
+                  }
+                >
+                  {item.severity === "high"
+                    ? "Urgente"
                     : item.severity === "normal"
-                      ? "warning"
-                      : "neutral"
-                }
-              >
-                {item.severity === "high"
-                  ? "Urgente"
-                  : item.severity === "normal"
-                    ? "Pendiente"
-                    : "Informativo"}
-              </Badge>
+                      ? "Pendiente"
+                      : "Informativo"}
+                </Badge>
+              </span>
             </div>
           ))}
         </SectionCard>
@@ -452,9 +458,9 @@ export default async function Home() {
           partyLinks.map((link) => (
             <div
               key={link.id}
-              className="flex items-center justify-between px-5 py-4"
+              className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-5 py-4"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-text-primary">
                   {link.party.fullName}
                 </p>
@@ -464,7 +470,7 @@ export default async function Home() {
                   {link.party.taxId ? ` · RUC ${link.party.taxId}` : ""}
                 </p>
               </div>
-              <p className="text-xs text-text-tertiary">{link.entity.name}</p>
+              <p className="shrink-0 text-xs text-text-tertiary">{link.entity.name}</p>
             </div>
           ))
         )}
@@ -478,19 +484,19 @@ export default async function Home() {
         {obligationRows.map((group) => (
           <div
             key={group.code}
-            className="flex items-center justify-between px-5 py-4"
+            className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 py-4"
           >
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-text-primary">
                 {group.code} — {group.name}
               </p>
-              <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {group.entities.map((e) => (
                   <EntityDot key={e.id} name={e.name} colorToken={e.colorToken} />
                 ))}
               </div>
             </div>
-            <div className="text-right">
+            <div className="shrink-0 text-right">
               {group.pending ? (
                 <Badge tone="warning">Vencimiento sin confirmar</Badge>
               ) : (
@@ -517,10 +523,12 @@ export default async function Home() {
           activityItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between gap-3 px-5 py-3.5"
+              className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-5 py-3.5"
             >
-              <div className="flex items-center gap-2">
-                <EntityDot name="" colorToken={item.colorToken ?? null} />
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <span className="mt-1">
+                  <EntityDot name="" colorToken={item.colorToken ?? null} />
+                </span>
                 <p className="text-sm text-text-primary">{item.text}</p>
               </div>
               <p className="tabular shrink-0 text-xs text-text-tertiary">

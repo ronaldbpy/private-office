@@ -117,9 +117,9 @@ export function VaultSection({
               href={`/api/vault/${doc.id}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-surface-2"
+              className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-5 py-4 transition-colors hover:bg-surface-2"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-text-primary">
                   {doc.title}
                 </p>
