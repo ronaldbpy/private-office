@@ -40,6 +40,7 @@ model Entity {
   userAccess   UserAccess[]
   partyLinks   PartyEntityLink[]
   obligations  Obligation[]
+  documentLinks    DocumentEntityLink[]
   ownedInterests   OwnershipInterest[] @relation("OwnerOf") // participaciones que ESTA entidad posee en otras
   interestsHeldBy  OwnershipInterest[] @relation("OwnedBy") // participaciones que otros poseen SOBRE esta entidad
 
@@ -229,4 +230,74 @@ model OwnershipInterest {
   updatedAt         DateTime  @updatedAt
 
   @@map("ownership_interests")
+}
+
+// ---------------------------------------------------------------------------
+// VAULT — Documentos (FS-016)
+// v1 MVP: el archivo se guarda en disco local del servidor, fuera de
+// /public, servido solo por una ruta autenticada (app/api/vault/[id]/route.ts)
+// que revisa acceso con lib/access.ts antes de entregar bytes. Esto es un
+// placeholder de almacenamiento para poder probar el sistema de punta a
+// punta hoy mismo — MD-500 deja pendiente la decisión de object storage
+// real (S3/R2/etc.) vía ADR. Cuando se decida, `storagePath` pasa a ser una
+// key de ese storage en vez de una ruta de filesystem; el resto del modelo
+// (hash, versionado, clasificación, vínculos) no cambia.
+// ---------------------------------------------------------------------------
+
+enum DocumentClassification {
+  RESTRICTED // identidad, bancario, ownership, tax, credenciales (SEC-001)
+  CONFIDENTIAL // contratos, facturas, reportes internos, datos de proyecto
+  INTERNAL // procedimientos operativos, plantillas aprobadas
+  PUBLIC // material externo explícitamente aprobado para publicar
+}
+
+model Document {
+  id             String                 @id @default(uuid())
+  title          String
+  filename       String // nombre original del archivo subido
+  mimeType       String
+  sizeBytes      Int
+  contentHash    String // sha256 del binario original (FS-016: preservar procedencia)
+  storagePath    String // ruta relativa dentro del storage local (MVP)
+  classification DocumentClassification @default(CONFIDENTIAL)
+  // Versionado simple: una versión nueva es un Document nuevo que reemplaza
+  // al anterior — el original nunca se edita ni se borra (regla FS-016:
+  // "crear versiones inmutables en vez de sobrescribir").
+  supersedesId   String?                @unique
+  supersedes     Document?              @relation("DocumentVersions", fields: [supersedesId], references: [id])
+  supersededBy   Document?              @relation("DocumentVersions")
+  uploadedBy     String // clerkUserId de quien subió el archivo
+  createdAt      DateTime               @default(now())
+
+  entityLinks    DocumentEntityLink[]
+  accessLog      DocumentAccessLog[]
+
+  @@map("documents")
+}
+
+// Un documento puede estar relacionado a más de una entidad a la vez
+// (ej: un contrato entre dos empresas del Grupo). FS-016.
+model DocumentEntityLink {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+  entityId   String
+  entity     Entity   @relation(fields: [entityId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([documentId, entityId])
+  @@map("document_entity_links")
+}
+
+// Auditoría de descargas/previsualizaciones (regla FS-016 / SEC-002: toda
+// lectura de un documento sensible queda registrada).
+model DocumentAccessLog {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+  accessedBy String // clerkUserId
+  action     String // "download" | "preview" | "upload"
+  occurredAt DateTime @default(now())
+
+  @@map("document_access_log")
 }

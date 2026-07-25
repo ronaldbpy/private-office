@@ -135,7 +135,13 @@ async function main() {
     { code: "726", name: "RET IDU", activeSince: new Date("2026-07-22") },
   ];
 
-  for (const entity of [axentia, amelia]) {
+  // Las 6 empresas del grupo constructor comparten el mismo set: toda EAS en
+  // Paraguay tributa igual por defecto (211/954/700/726), independientemente
+  // del RUC específico — esto es un hecho sobre la forma legal, no algo que
+  // dependa de que exista el RUC real. `activeSince` usa la fecha de alta
+  // provisional (misma que Axentia/Amelia); se corrige a la fecha real de
+  // inscripción ante la SET cuando exista el RUC definitivo.
+  for (const entity of [axentia, amelia, ...constructionCos]) {
     for (const ob of sharedObligations) {
       await prisma.obligation.upsert({
         where: { entityId_code: { entityId: entity.id, code: ob.code } },

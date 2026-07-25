@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Vault — almacenamiento local MVP (FS-016). Placeholder hasta decidir
+# object storage real (S3/R2/etc.) por ADR. Nunca commitear archivos subidos.
+/.vault-storage/

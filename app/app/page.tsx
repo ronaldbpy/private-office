@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/prisma";
 import { nextDueDate, daysUntil, formatDatePY } from "@/lib/dueDates";
 import { getUserAccess, accessibleEntityIds } from "@/lib/access";
+import { VaultSection } from "@/components/VaultSection";
 
 function Badge({
   tone,
@@ -112,6 +113,24 @@ export default async function Home() {
     include: { party: true, entity: true },
     orderBy: { party: { fullName: "asc" } },
   });
+
+  // FS-016: documentos vinculados a alguna de las entidades accesibles.
+  const documents = await prisma.document.findMany({
+    where: { entityLinks: { some: { entityId: { in: entityIds } } } },
+    include: { entityLinks: { include: { entity: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  const vaultDocuments = documents.map((d) => ({
+    id: d.id,
+    title: d.title,
+    filename: d.filename,
+    classification: d.classification,
+    entityNames: d.entityLinks.map((l) => l.entity.name),
+  }));
+  const vaultEntities = access.map((a) => ({
+    id: a.entityId,
+    name: a.entityName,
+  }));
 
   // Agrupar participaciones por empresa (ahora una empresa puede tener
   // varios owners a la vez, ej: Axentia EAS 50% + Alexis De Kermenguy 50%).
@@ -262,6 +281,10 @@ export default async function Home() {
             </div>
           ))
         )}
+      </SectionCard>
+
+      <SectionCard eyebrow="FS-016" title="Vault">
+        <VaultSection entities={vaultEntities} documents={vaultDocuments} />
       </SectionCard>
 
       <SectionCard eyebrow="FS-017" title="Obligaciones tributarias">
