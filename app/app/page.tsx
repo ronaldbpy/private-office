@@ -204,6 +204,96 @@ export default async function Home() {
     ownershipByEntity.set(key, list);
   }
 
+  // ---------------------------------------------------------------------
+  // Cola de atención (FS-001) — no agrega ningún hecho nuevo: solo junta en
+  // un solo lugar lo que YA está marcado como pendiente en otras secciones
+  // (empresas sin RUC, vencimientos sin confirmar, vencimientos próximos),
+  // para que se vea de un vistazo qué necesita atención hoy — tal como pide
+  // MD-100 ("la experiencia es un decision briefing").
+  // ---------------------------------------------------------------------
+  type AttentionItem = {
+    id: string;
+    severity: "high" | "normal" | "informational";
+    text: string;
+    colorToken?: string | null;
+  };
+  const attentionItems: AttentionItem[] = [];
+
+  for (const group of ownershipByEntity.values()) {
+    const entity = group[0].subjectEntity;
+    if (entity.status === "pending_incorporation") {
+      attentionItems.push({
+        id: `pending-${entity.id}`,
+        severity: "normal",
+        text: `${entity.name} — sin RUC, pendiente de constitución legal`,
+        colorToken: entity.colorToken,
+      });
+    }
+  }
+
+  for (const group of obligationRows) {
+    if (group.pending) {
+      attentionItems.push({
+        id: `oblig-pending-${group.code}`,
+        severity: "informational",
+        text: `${group.code} — ${group.name}: vencimiento sin confirmar (${group.entities.length} ${group.entities.length === 1 ? "empresa" : "empresas"})`,
+      });
+    } else if (group.daysLeft !== null && group.daysLeft <= 15) {
+      attentionItems.push({
+        id: `oblig-soon-${group.code}`,
+        severity: group.daysLeft <= 7 ? "high" : "normal",
+        text: `${group.code} — ${group.name}: vence en ${group.daysLeft} días (${group.entities.length} ${group.entities.length === 1 ? "empresa" : "empresas"})`,
+      });
+    }
+  }
+
+  const severityOrder: Record<AttentionItem["severity"], number> = {
+    high: 0,
+    normal: 1,
+    informational: 2,
+  };
+  attentionItems.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+  // ---------------------------------------------------------------------
+  // Actividad reciente (FS-002, versión liviana) — mismo principio: nada
+  // nuevo, solo se combinan fechas `createdAt` que ya existen en 3 tablas
+  // distintas (entidad creada, documento subido, participación registrada)
+  // en una sola línea de tiempo ordenada.
+  // ---------------------------------------------------------------------
+  type ActivityItem = {
+    id: string;
+    date: Date;
+    text: string;
+    colorToken?: string | null;
+  };
+  const activityItems: ActivityItem[] = [
+    ...Array.from(ownershipByEntity.values()).map((group) => {
+      const entity = group[0].subjectEntity;
+      return {
+        id: `entity-${entity.id}`,
+        date: entity.createdAt,
+        text: `${entity.name} — entidad creada en el sistema`,
+        colorToken: entity.colorToken,
+      };
+    }),
+    ...documents.map((d) => ({
+      id: `doc-${d.id}`,
+      date: d.createdAt,
+      text: `Documento subido: “${d.title}”`,
+      colorToken: d.entityLinks[0]?.entity.colorToken ?? null,
+    })),
+    ...ownershipInterests.map((oi) => ({
+      id: `oi-${oi.id}`,
+      date: oi.createdAt,
+      text: `Participación registrada en ${oi.subjectEntity.name}${
+        oi.percentage ? ` (${Number(oi.percentage)}%)` : ""
+      }`,
+      colorToken: oi.subjectEntity.colorToken,
+    })),
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 12);
+
   const relationshipLabels: Record<string, string> = {
     SUPPLIER: "Proveedor",
     CLIENT: "Cliente",
@@ -245,6 +335,39 @@ export default async function Home() {
         </div>
         <UserButton />
       </header>
+
+      {attentionItems.length > 0 && (
+        <SectionCard eyebrow="FS-001" title="Cola de atención">
+          {attentionItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-3 px-5 py-3.5"
+            >
+              <div className="flex items-center gap-2">
+                {item.colorToken !== undefined && (
+                  <EntityDot name="" colorToken={item.colorToken ?? null} />
+                )}
+                <p className="text-sm text-text-primary">{item.text}</p>
+              </div>
+              <Badge
+                tone={
+                  item.severity === "high"
+                    ? "danger"
+                    : item.severity === "normal"
+                      ? "warning"
+                      : "neutral"
+                }
+              >
+                {item.severity === "high"
+                  ? "Urgente"
+                  : item.severity === "normal"
+                    ? "Pendiente"
+                    : "Informativo"}
+              </Badge>
+            </div>
+          ))}
+        </SectionCard>
+      )}
 
       <SectionCard eyebrow="FS-003" title="Estructura de propiedad">
         {Array.from(ownershipByEntity.values()).map((interests) => {
@@ -383,6 +506,29 @@ export default async function Home() {
             </div>
           </div>
         ))}
+      </SectionCard>
+
+      <SectionCard eyebrow="FS-002" title="Actividad reciente">
+        {activityItems.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-text-secondary">
+            Todavía no hay actividad registrada.
+          </p>
+        ) : (
+          activityItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-3 px-5 py-3.5"
+            >
+              <div className="flex items-center gap-2">
+                <EntityDot name="" colorToken={item.colorToken ?? null} />
+                <p className="text-sm text-text-primary">{item.text}</p>
+              </div>
+              <p className="tabular shrink-0 text-xs text-text-tertiary">
+                {formatDatePY(item.date)}
+              </p>
+            </div>
+          ))
+        )}
       </SectionCard>
     </main>
   );
