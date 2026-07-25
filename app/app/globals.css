@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Sistema de tokens — Private Office (MD-400 / UI-001)
+ * Dirección: "neutros cálidos, grafito, acento petróleo restringido,
+ * semánticos verde/ámbar/rojo, dark mode de primera clase" (MD-400).
+ * Dark es el modo primario (no un negativo automático del claro) — un
+ * escritorio privado se piensa de noche tanto como de día.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* Superficies — grafito cálido, no negro puro ni gris frío */
+  --surface-0: #f7f5f0; /* fondo de página */
+  --surface-1: #ffffff; /* tarjetas */
+  --surface-2: #eeece4; /* hover / filas alternas */
+  --border: #ded9cc;
+  --border-soft: #e7e3d8;
+
+  /* Texto — cálido, nunca negro puro */
+  --text-primary: #211f1a;
+  --text-secondary: #6b6558;
+  --text-tertiary: #9a9484;
+
+  /* Acento — petróleo restringido */
+  --accent: #2f5d61;
+  --accent-strong: #1f4649;
+  --accent-soft: #dce9e9;
+
+  /* Semánticos */
+  --success: #4f7a52;
+  --success-soft: #e3ecdf;
+  --warning: #a9762e;
+  --warning-soft: #f3e6cf;
+  --danger: #a24438;
+  --danger-soft: #f2ded9;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --surface-0: #15140f;
+    --surface-1: #1c1a14;
+    --surface-2: #26231b;
+    --border: #37331f;
+    --border-soft: #2b281c;
+
+    --text-primary: #f4f1e8;
+    --text-secondary: #a89f8c;
+    --text-tertiary: #756e5d;
+
+    --accent: #6ba1a3;
+    --accent-strong: #8fbdbe;
+    --accent-soft: #1f3536;
+
+    --success: #8bab7e;
+    --success-soft: #26301f;
+    --warning: #d1a355;
+    --warning-soft: #362a17;
+    --danger: #c07b6c;
+    --danger-soft: #3a2019;
   }
 }
 
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Números y montos siempre en cifras tabulares (UI-001: "tabular numerals") */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono), ui-monospace, monospace;
 }

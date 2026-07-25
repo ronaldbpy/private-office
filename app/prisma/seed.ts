@@ -222,15 +222,38 @@ async function main() {
   );
 
   // ---------------------------------------------------------------------
-  // 4) Acceso del Owner (FS-005) — Ronald tiene rol OWNER en las 3 entidades
-  // originales + las 6 empresas del grupo constructor. Ronald es el
-  // inversionista/owner en todas, aunque en las 6 nuevas la propiedad
-  // formal la sostenga Axentia EAS (ver ADR-006) — acceso operativo al
-  // sistema es independiente de quién figura como titular societario.
+  // 4) Acceso del Owner (FS-005 / ADR-007) — Ronald tiene rol OWNER, con
+  // acceso en cascada sobre Axentia EAS: cualquier empresa donde Axentia
+  // figure como owner en OwnershipInterest aparece automáticamente para
+  // Ronald, sin necesidad de un UserAccess por subsidiaria. Amelia y el RUC
+  // personal no son subsidiarias de nada, así que llevan acceso directo.
   // ---------------------------------------------------------------------
   const OWNER_CLERK_ID = "user_3GvDXLehFYaF4fb0qQpnD73FUEM";
 
-  for (const entity of [axentia, amelia, personal, ...constructionCos]) {
+  // Limpieza: los 6 UserAccess directos que se habían creado ayer/hoy para
+  // Ronald sobre cada empresa del grupo constructor quedan reemplazados por
+  // el grant en cascada sobre Axentia. Se borran (junto con su audit log)
+  // para no dejar acceso duplicado/redundante conviviendo con la cascada.
+  const staleDirectGrants = await prisma.userAccess.findMany({
+    where: {
+      clerkUserId: OWNER_CLERK_ID,
+      entityId: { in: constructionCosData.map((c) => c.id) },
+    },
+  });
+  if (staleDirectGrants.length > 0) {
+    await prisma.accessChangeLog.deleteMany({
+      where: { userAccessId: { in: staleDirectGrants.map((g) => g.id) } },
+    });
+    await prisma.userAccess.deleteMany({
+      where: { id: { in: staleDirectGrants.map((g) => g.id) } },
+    });
+    console.log(
+      `✓ Limpiados ${staleDirectGrants.length} accesos directos redundantes (reemplazados por cascada Axentia → subsidiarias).`,
+    );
+  }
+
+  for (const entity of [axentia, amelia, personal]) {
+    const cascades = entity.id === axentia.id;
     const access = await prisma.userAccess.upsert({
       where: {
         clerkUserId_entityId: {
@@ -238,11 +261,12 @@ async function main() {
           entityId: entity.id,
         },
       },
-      update: {},
+      update: { cascadesToSubsidiaries: cascades },
       create: {
         clerkUserId: OWNER_CLERK_ID,
         entityId: entity.id,
         role: "OWNER",
+        cascadesToSubsidiaries: cascades,
       },
     });
 
@@ -256,13 +280,17 @@ async function main() {
           userAccessId: access.id,
           changedBy: OWNER_CLERK_ID,
           changeType: "created",
-          afterState: `role=OWNER, entity=${entity.name}`,
+          afterState: cascades
+            ? `role=OWNER, entity=${entity.name}, cascadesToSubsidiaries=true`
+            : `role=OWNER, entity=${entity.name}`,
         },
       });
     }
   }
 
-  console.log("✔ Acceso OWNER asignado a Ronald en las 3 entidades originales + las 6 empresas del grupo constructor.");
+  console.log(
+    "✔ Acceso OWNER asignado a Ronald: directo en Axentia (cascada a subsidiarias), Amelia y RUC personal.",
+  );
 
   // ---------------------------------------------------------------------
   // 5) Ownership (FS-003) — solo se registran hechos YA consumados.
@@ -383,6 +411,45 @@ async function main() {
   console.log(
     "✔ Ownership 50/50 (Axentia / Alexis) cargado para las 6 empresas del grupo constructor (unverified, pendiente constitución legal).",
   );
+
+  // ---------------------------------------------------------------------
+  // 8) Acceso al sistema para Alexis y un futuro administrador del holding
+  // (FS-005 / ADR-007) — PENDIENTE. Por regla FS-005 no hay auto-registro:
+  // el Owner debe crear la cuenta manualmente desde el Clerk Dashboard y
+  // conseguir su clerkUserId (user_...) antes de que esto pueda cargarse,
+  // igual que se hizo con OWNER_CLERK_ID arriba. Nada de esto se ejecuta
+  // todavía — es la plantilla lista para cuando exista el dato real.
+  //
+  // Alexis (socio operativo, acceso directo a cada una de sus 6 empresas —
+  // no cascada, porque él no es owner de Axentia, es owner directo de cada
+  // subsidiaria):
+  //
+  //   const alexisAccess = await prisma.party.update({
+  //     where: { id: alexis.id },
+  //     data: { clerkUserId: "user_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
+  //   });
+  //   for (const co of constructionCos) {
+  //     await prisma.userAccess.upsert({
+  //       where: { clerkUserId_entityId: { clerkUserId: alexisAccess.clerkUserId!, entityId: co.id } },
+  //       update: {},
+  //       create: { clerkUserId: alexisAccess.clerkUserId!, entityId: co.id, role: "SOCIO_OPERATIVO" },
+  //     });
+  //   }
+  //
+  // Administrador del holding (persona aún sin nombrar — no se inventa el
+  // dato por regla MD-000 #1). Cuando exista, UN SOLO grant en cascada sobre
+  // Axentia le da acceso a toda subsidiaria presente y futura:
+  //
+  //   await prisma.userAccess.upsert({
+  //     where: { clerkUserId_entityId: { clerkUserId: "user_...", entityId: axentia.id } },
+  //     update: { cascadesToSubsidiaries: true },
+  //     create: {
+  //       clerkUserId: "user_...",
+  //       entityId: axentia.id,
+  //       role: "ADMINISTRADOR_HOLDING",
+  //       cascadesToSubsidiaries: true,
+  //     },
+  //   });
 }
 
 main()

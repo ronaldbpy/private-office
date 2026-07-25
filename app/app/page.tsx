@@ -4,6 +4,52 @@ import { prisma } from "@/lib/prisma";
 import { nextDueDate, daysUntil, formatDatePY } from "@/lib/dueDates";
 import { getUserAccess, accessibleEntityIds } from "@/lib/access";
 
+function Badge({
+  tone,
+  children,
+}: {
+  tone: "warning" | "success" | "danger" | "neutral";
+  children: React.ReactNode;
+}) {
+  const toneClasses = {
+    warning: "bg-warning-soft text-warning",
+    success: "bg-success-soft text-success",
+    danger: "bg-danger-soft text-danger",
+    neutral: "bg-surface-2 text-text-secondary",
+  }[tone];
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${toneClasses}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-surface-1">
+      <div className="border-b border-border-soft px-5 py-4">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-text-tertiary">
+          {eyebrow}
+        </p>
+        <h2 className="mt-0.5 font-[family-name:var(--font-display)] text-xl text-text-primary">
+          {title}
+        </h2>
+      </div>
+      <div className="divide-y divide-border-soft">{children}</div>
+    </section>
+  );
+}
+
 export default async function Home() {
   const user = await currentUser();
 
@@ -22,12 +68,14 @@ export default async function Home() {
   if (entityIds.length === 0) {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-4 p-8 text-center">
-        <h1 className="text-2xl font-light">Private Office</h1>
-        <p className="text-neutral-500">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl text-text-primary">
+          Private Office
+        </h1>
+        <p className="text-text-secondary">
           Tu usuario todavía no tiene ninguna empresa asignada. Pedile al
           Owner que te dé acceso desde la administración del sistema.
         </p>
-        <UserButton afterSignOutUrl="/sign-in" />
+        <UserButton />
       </main>
     );
   }
@@ -86,132 +134,143 @@ export default async function Home() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 p-8">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10 sm:px-8">
+      <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-light">Private Office</h1>
-          <p className="text-sm text-neutral-500">
-            Hola, {user.firstName ?? "Ronald"}. Hoy es {formatDatePY(today)}.
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">
+            Private Office
           </p>
-          <p className="text-xs text-neutral-400">
-            Acceso a: {access.map((a) => a.entityName).join(", ")}
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl italic text-text-primary">
+            Hola, {user.firstName ?? "Ronald"}.
+          </h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Hoy es {formatDatePY(today)}.
           </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {access.map((a) => (
+              <span
+                key={a.entityId}
+                className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs text-text-secondary"
+                title={a.cascadedFrom ? `Acceso vía ${a.cascadedFrom}` : undefined}
+              >
+                {a.entityName}
+                {a.cascadedFrom && (
+                  <span className="text-text-tertiary"> · vía {a.cascadedFrom}</span>
+                )}
+              </span>
+            ))}
+          </div>
         </div>
-        <UserButton afterSignOutUrl="/sign-in" />
+        <UserButton />
       </header>
 
-      <section>
-        <h2 className="mb-3 text-lg font-medium">Estructura de propiedad</h2>
-        <div className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
-          {Array.from(ownershipByEntity.values()).map((interests) => {
-            const entity = interests[0].subjectEntity;
-            const notesText = interests.find((oi) => oi.notes)?.notes;
-            return (
-              <div key={entity.id} className="px-4 py-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium">{entity.name}</p>
-                  {entity.status === "pending_incorporation" && (
-                    <span className="rounded-full border border-amber-600/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-600">
-                      Pendiente de constitución
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 flex flex-col gap-0.5">
-                  {interests.map((oi) => {
-                    const ownerName =
-                      oi.owner?.name ===
-                      "RUC Personal — Ronald Alejandro Barrios Duarte"
-                        ? "Ronald"
-                        : (oi.owner?.name ?? oi.ownerParty?.fullName ?? "—");
-                    return (
-                      <div
-                        key={oi.id}
-                        className="flex items-center justify-between text-neutral-500"
-                      >
-                        <span>
-                          {ownerName}
-                          {oi.verificationState === "unverified" && (
-                            <span className="ml-1 text-amber-600">
-                              (sin verificar)
-                            </span>
-                          )}
-                        </span>
-                        <span className="font-medium text-neutral-900">
-                          {oi.percentage ? `${Number(oi.percentage)}%` : "—"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {notesText && (
-                  <p className="mt-2 text-xs text-amber-600">{notesText}</p>
+      <SectionCard eyebrow="FS-003" title="Estructura de propiedad">
+        {Array.from(ownershipByEntity.values()).map((interests) => {
+          const entity = interests[0].subjectEntity;
+          const notesText = interests.find((oi) => oi.notes)?.notes;
+          return (
+            <div key={entity.id} className="px-5 py-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium text-text-primary">
+                  {entity.name}
+                </p>
+                {entity.status === "pending_incorporation" && (
+                  <Badge tone="warning">Pendiente de constitución</Badge>
                 )}
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-lg font-medium">Contactos</h2>
-        <div className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
-          {partyLinks.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-neutral-500">
-              Todavía no hay contactos cargados.
-            </p>
-          ) : (
-            partyLinks.map((link) => (
-              <div
-                key={link.id}
-                className="flex items-center justify-between px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium">{link.party.fullName}</p>
-                  <p className="text-neutral-500">
-                    {relationshipLabels[link.party.relationshipType] ??
-                      link.party.relationshipType}
-                    {link.party.taxId ? ` · RUC ${link.party.taxId}` : ""}
-                  </p>
-                </div>
-                <p className="text-neutral-500">{link.entity.name}</p>
+              <div className="mt-2 flex flex-col gap-1">
+                {interests.map((oi) => {
+                  const ownerName =
+                    oi.owner?.name ===
+                    "RUC Personal — Ronald Alejandro Barrios Duarte"
+                      ? "Ronald"
+                      : (oi.owner?.name ?? oi.ownerParty?.fullName ?? "—");
+                  return (
+                    <div
+                      key={oi.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-text-secondary">
+                        {ownerName}
+                        {oi.verificationState === "unverified" && (
+                          <span className="ml-1.5">
+                            <Badge tone="neutral">Sin verificar</Badge>
+                          </span>
+                        )}
+                      </span>
+                      <span className="tabular font-medium text-text-primary">
+                        {oi.percentage ? `${Number(oi.percentage)}%` : "—"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </div>
-      </section>
+              {notesText && (
+                <p className="mt-2.5 text-xs leading-relaxed text-warning">
+                  {notesText}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </SectionCard>
 
-      <section>
-        <h2 className="mb-3 text-lg font-medium">Obligaciones tributarias</h2>
-        <div className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
-          {rows.map((row) => (
+      <SectionCard eyebrow="FS-004" title="Contactos">
+        {partyLinks.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-text-secondary">
+            Todavía no hay contactos cargados.
+          </p>
+        ) : (
+          partyLinks.map((link) => (
             <div
-              key={row.id}
-              className="flex items-center justify-between px-4 py-3 text-sm"
+              key={link.id}
+              className="flex items-center justify-between px-5 py-4"
             >
               <div>
-                <p className="font-medium">
-                  {row.code} — {row.name}
+                <p className="text-sm font-medium text-text-primary">
+                  {link.party.fullName}
                 </p>
-                <p className="text-neutral-500">{row.entity.name}</p>
+                <p className="text-xs text-text-secondary">
+                  {relationshipLabels[link.party.relationshipType] ??
+                    link.party.relationshipType}
+                  {link.party.taxId ? ` · RUC ${link.party.taxId}` : ""}
+                </p>
               </div>
-              <div className="text-right">
-                {row.pending ? (
-                  <span className="text-amber-600">
-                    Vencimiento sin confirmar
-                  </span>
-                ) : (
-                  <>
-                    <p>Próximo: {row.nextDue ? formatDatePY(row.nextDue) : "—"}</p>
-                    <p className="text-neutral-500">
-                      {row.daysLeft !== null ? `en ${row.daysLeft} días` : ""}
-                    </p>
-                  </>
-                )}
-              </div>
+              <p className="text-xs text-text-tertiary">{link.entity.name}</p>
             </div>
-          ))}
-        </div>
-      </section>
+          ))
+        )}
+      </SectionCard>
+
+      <SectionCard eyebrow="FS-017" title="Obligaciones tributarias">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="flex items-center justify-between px-5 py-4"
+          >
+            <div>
+              <p className="text-sm font-medium text-text-primary">
+                {row.code} — {row.name}
+              </p>
+              <p className="text-xs text-text-secondary">{row.entity.name}</p>
+            </div>
+            <div className="text-right">
+              {row.pending ? (
+                <Badge tone="warning">Vencimiento sin confirmar</Badge>
+              ) : (
+                <>
+                  <p className="tabular text-sm text-text-primary">
+                    {row.nextDue ? formatDatePY(row.nextDue) : "—"}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    {row.daysLeft !== null ? `en ${row.daysLeft} días` : ""}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </SectionCard>
     </main>
   );
 }

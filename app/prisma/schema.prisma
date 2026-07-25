@@ -55,9 +55,11 @@ model Entity {
 
 enum Role {
   OWNER
+  ADMINISTRADOR_HOLDING // administra un holding y, por cascada, todas sus subsidiarias (ver UserAccess.cascadesToSubsidiaries)
+  SOCIO_OPERATIVO // socio con responsabilidad operativa en una o más empresas (ej: Alexis de Kermenguy), distinto de un GERENTE contratado
+  GERENTE
   CONTADOR
   ASISTENTE
-  GERENTE
 }
 
 model UserAccess {
@@ -66,6 +68,11 @@ model UserAccess {
   role        Role
   entityId    String
   entity      Entity   @relation(fields: [entityId], references: [id])
+  // Si es true y `entity` es un holding, este acceso se extiende automáticamente
+  // a toda empresa donde `entity` figure como owner en OwnershipInterest — sin
+  // necesidad de crear un UserAccess por cada subsidiaria nueva. Ver lib/access.ts
+  // y ADR-007 (Cascading Holding Access). Un solo nivel por ahora (no recursivo).
+  cascadesToSubsidiaries Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -112,6 +119,12 @@ model Party {
   address          String?
   relationshipType RelationshipType
   status           String           @default("active") // active | archived (nunca se borra si tiene vínculos)
+  // Si este Party recibe acceso al sistema (ej: Alexis de Kermenguy pasa a
+  // tener login), se vincula acá su clerkUserId — así el sistema puede resolver
+  // "mi propia propiedad" vía ownedInterests sin duplicar su identidad como
+  // un segundo registro. Null mientras el contacto no tenga login (caso normal
+  // de la mayoría de los Party: proveedores, bancos, etc.).
+  clerkUserId      String?          @unique
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
