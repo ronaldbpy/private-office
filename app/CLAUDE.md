@@ -2,16 +2,36 @@
 
 Antes de tocar código en este proyecto, leé `docs/12_PROMPTS/PROMPT-000_MASTER_CONTEXT.md` y `docs/AI_DEVELOPMENT_CONTEXT.md`.
 
-## Decisión técnica fijada — NO actualizar sin confirmar con el owner
+## ⚠️ No corras dos sesiones de agente en paralelo sobre esta carpeta
 
-- **Prisma: fijado en versión 6.x (`prisma@6`, `@prisma/client@6`).**
-  Prisma 7 (lanzado nov. 2025) rediseñó por completo la configuración de
-  conexión (requiere `prisma.config.ts` + adaptadores de driver por base
-  de datos) y todavía tiene documentación y tutoriales inmaduros a la
-  fecha de este proyecto (julio 2026). Prisma CLI va a sugerir actualizar
-  a la 7 en cada `generate`/`migrate` — **ignorar esa sugerencia** hasta
-  que el ecosistema madure y se tome una decisión explícita (requeriría
-  su propio ADR).
+El 2026-07-25 quedó un archivo (`app/lib/entityColors.ts`) escrito por una
+sesión de Claude Code que se quedó sin tokens a mitad de tarea, mientras otra
+sesión (vía chat, con herramientas de filesystem/terminal) trabajaba al mismo
+tiempo sobre el mismo repo y resolvía el mismo problema de otra forma. El
+archivo quedó huérfano (sin usar, sin commitear) hasta que apareció por
+casualidad en un `git add -A`. No causó daño esta vez, pero es una fuente
+real de conflictos silenciosos. Si vas a usar Claude Code en esta carpeta,
+confirmá primero que no haya otra sesión de IA activa sobre el mismo
+directorio, y revisá `git status`/`git log` al empezar.
+
+## Decisiones técnicas fijadas — NO cambiar sin confirmar con el owner
+
+- **Prisma: fijado en versión 6.x (`prisma@6`, `@prisma/client@6`).** Prisma 7
+  (lanzado nov. 2025) todavía tiene documentación y tutoriales inmaduros a la
+  fecha de este proyecto (julio 2026). El Prisma CLI va a sugerir actualizar
+  a la 7 en cada `generate`/`migrate` — **ignorar esa sugerencia** hasta que
+  el ecosistema madure y se tome una decisión explícita (requeriría su propio
+  ADR). Esto sigue vigente.
+
+- **Configuración vía `prisma.config.ts` (desde 2026-07-25), NO
+  `package.json#prisma`.** Esto es distinto de subir a Prisma 7 — es un
+  formato que Prisma 6.x ya soporta y va a exigir en la v7; migrarlo ahora
+  solo elimina el warning de deprecación, no cambia versiones ni comportamiento.
+  **Importante:** el formato nuevo NO carga `.env` automáticamente como hacía
+  el viejo — por eso `prisma.config.ts` empieza con `import "dotenv/config"`.
+  Si ese import se borra, `prisma db push`/`migrate` fallan con
+  `Environment variable not found: DATABASE_URL` (el seed corrido vía `tsx`
+  no se ve afectado porque `tsx` carga `.env` por su cuenta).
 
 - **Cambios de esquema: usar `npx prisma db push`, NO `npx prisma migrate dev`.**
   La base de Render no otorga permisos de superusuario al usuario de la app,
@@ -26,4 +46,26 @@ Antes de tocar código en este proyecto, leé `docs/12_PROMPTS/PROMPT-000_MASTER
   servidor de desarrollo** (`Ctrl+C` y de nuevo `npm run dev`), y si hace
   falta correr `npx prisma generate` a mano. El servidor mantiene en memoria
   la versión vieja del cliente Prisma; sin reinicio, tira
-  `Cannot read properties of undefined` al usar un modelo nuevo.
+  `Cannot read properties of undefined` al usar un modelo nuevo. Si el
+  reinicio normal no alcanza (Turbopack a veces queda con caché corrupta),
+  `rm -rf .next` antes de `npm run dev` suele resolverlo. Si el puerto 3000
+  queda "trabado" después de un `Ctrl+C`, buscar procesos huérfanos con
+  `lsof -i :3000` / `ps -ef | grep next-server` y matarlos a mano — puede
+  quedar un `next-server` corriendo sin que el `npm run dev` padre lo sepa.
+
+## Arquitectura vigente que conviene conocer antes de tocar código
+
+- **Acceso en cascada por holding (ADR-007, `lib/access.ts`).** Un
+  `UserAccess` con `cascadesToSubsidiaries: true` sobre una entidad extiende
+  el acceso automáticamente a toda entidad donde esa entidad figura como
+  `owner` en `OwnershipInterest` (un solo nivel, no recursivo). No asumir que
+  el acceso de un usuario es solo lo que tiene como `UserAccess` directo —
+  siempre pasar por `getUserAccess()`, nunca consultar `user_access` a mano.
+- **`OwnershipInterest.owner` puede ser una `Entity` O un `Party`**
+  (`ownerId` / `ownerPartyId`, exactamente uno poblado). Ver ADR-007.
+- **Vault (`FS-016`) usa disco local (`.vault-storage/`, gitignored) como
+  storage v1**, deliberadamente, hasta decidir un object storage real por
+  ADR (ver nota en `prisma/schema.prisma` sobre el modelo `Document`). No
+  asumir que hay S3/R2 configurado.
+- Estructura del grupo constructor (6 empresas, `pending_incorporation`,
+  RUC placeholder) documentada en ADR-006.
