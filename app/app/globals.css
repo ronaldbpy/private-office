@@ -33,6 +33,20 @@
   --warning-soft: #f3e6cf;
   --danger: #a24438;
   --danger-soft: #f2ded9;
+
+  /* Paleta categórica — identificador visual estable por empresa (no
+   * confundir con los semánticos de arriba: estos no dicen "estado", dicen
+   * "qué empresa es"). 9 tonos deliberadamente distintos entre sí y de
+   * success/warning/danger, dentro de la misma familia cálida/grafito. */
+  --cat-1: #2f5d61; /* petróleo (mismo tono que el acento — Axentia) */
+  --cat-2: #a3583f; /* terracota */
+  --cat-3: #465a7a; /* azul pizarra */
+  --cat-4: #93752a; /* mostaza */
+  --cat-5: #74456a; /* ciruela */
+  --cat-6: #71624a; /* piedra */
+  --cat-7: #9c5459; /* rosa empálvado */
+  --cat-8: #52633a; /* oliva */
+  --cat-9: #3c7278; /* cian apagado */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,6 +71,16 @@
     --warning-soft: #362a17;
     --danger: #c07b6c;
     --danger-soft: #3a2019;
+
+    --cat-1: #6ba1a3;
+    --cat-2: #cf9679;
+    --cat-3: #8fa0c2;
+    --cat-4: #d1ab5c;
+    --cat-5: #b586a4;
+    --cat-6: #b5a488;
+    --cat-7: #cf8a8e;
+    --cat-8: #a3b07a;
+    --cat-9: #7dc0c5;
   }
 }
 
@@ -78,6 +102,15 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+  --color-cat-7: var(--cat-7);
+  --color-cat-8: var(--cat-8);
+  --color-cat-9: var(--cat-9);
   --font-display: var(--font-fraunces);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

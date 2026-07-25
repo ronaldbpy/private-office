@@ -27,6 +27,26 @@ function Badge({
   );
 }
 
+// Puntito de color estable por empresa — identificador visual rápido para
+// ver de un vistazo qué empresas comparten un mismo vencimiento agrupado.
+function EntityDot({
+  name,
+  colorToken,
+}: {
+  name: string;
+  colorToken: string | null;
+}) {
+  return (
+    <span
+      title={name}
+      className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-border-soft"
+      style={{
+        backgroundColor: colorToken ? `var(--${colorToken})` : "var(--text-tertiary)",
+      }}
+    />
+  );
+}
+
 function SectionCard({
   eyebrow,
   title,
@@ -96,6 +116,48 @@ export default async function Home() {
       pending: !ob.dueRule?.confirmed,
     };
   });
+
+  // Agrupar por código de obligación (211, 700, etc.): el mismo vencimiento
+  // se repite idéntico entre empresas, así que se muestra UNA vez con un
+  // punto de color por cada empresa que lo tiene — de un vistazo se ve qué
+  // vence y a quiénes afecta, en vez de repetir la misma fila 9 veces.
+  const obligationGroups = new Map<
+    string,
+    {
+      code: string;
+      name: string;
+      nextDue: Date | null;
+      daysLeft: number | null;
+      pending: boolean;
+      entities: { id: string; name: string; colorToken: string | null }[];
+    }
+  >();
+  for (const row of rows) {
+    const entityInfo = {
+      id: row.entity.id,
+      name: row.entity.name,
+      colorToken: row.entity.colorToken,
+    };
+    const existing = obligationGroups.get(row.code);
+    if (existing) {
+      existing.entities.push(entityInfo);
+      // Conservador: si CUALQUIER entidad tiene ese código sin confirmar,
+      // el grupo entero se muestra como pendiente de confirmar.
+      existing.pending = existing.pending || row.pending;
+    } else {
+      obligationGroups.set(row.code, {
+        code: row.code,
+        name: row.name,
+        nextDue: row.nextDue,
+        daysLeft: row.daysLeft,
+        pending: row.pending,
+        entities: [entityInfo],
+      });
+    }
+  }
+  const obligationRows = Array.from(obligationGroups.values()).sort((a, b) =>
+    a.code.localeCompare(b.code),
+  );
 
   // FS-003: participaciones donde la entidad "sujeto" es una de las
   // entidades a las que este usuario tiene acceso. El owner puede ser una
@@ -169,9 +231,10 @@ export default async function Home() {
             {access.map((a) => (
               <span
                 key={a.entityId}
-                className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs text-text-secondary"
+                className="flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs text-text-secondary"
                 title={a.cascadedFrom ? `Acceso vía ${a.cascadedFrom}` : undefined}
               >
+                <EntityDot name={a.entityName} colorToken={a.entityColorToken} />
                 {a.entityName}
                 {a.cascadedFrom && (
                   <span className="text-text-tertiary"> · vía {a.cascadedFrom}</span>
@@ -219,6 +282,7 @@ export default async function Home() {
           return (
             <div key={entity.id} className="px-5 py-4">
               <div className="flex flex-wrap items-center gap-2">
+                <EntityDot name={entity.name} colorToken={entity.colorToken} />
                 <p className="text-sm font-medium text-text-primary">
                   {entity.name}
                 </p>
@@ -288,27 +352,31 @@ export default async function Home() {
       </SectionCard>
 
       <SectionCard eyebrow="FS-017" title="Obligaciones tributarias">
-        {rows.map((row) => (
+        {obligationRows.map((group) => (
           <div
-            key={row.id}
+            key={group.code}
             className="flex items-center justify-between px-5 py-4"
           >
             <div>
               <p className="text-sm font-medium text-text-primary">
-                {row.code} — {row.name}
+                {group.code} — {group.name}
               </p>
-              <p className="text-xs text-text-secondary">{row.entity.name}</p>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                {group.entities.map((e) => (
+                  <EntityDot key={e.id} name={e.name} colorToken={e.colorToken} />
+                ))}
+              </div>
             </div>
             <div className="text-right">
-              {row.pending ? (
+              {group.pending ? (
                 <Badge tone="warning">Vencimiento sin confirmar</Badge>
               ) : (
                 <>
                   <p className="tabular text-sm text-text-primary">
-                    {row.nextDue ? formatDatePY(row.nextDue) : "—"}
+                    {group.nextDue ? formatDatePY(group.nextDue) : "—"}
                   </p>
                   <p className="text-xs text-text-tertiary">
-                    {row.daysLeft !== null ? `en ${row.daysLeft} días` : ""}
+                    {group.daysLeft !== null ? `en ${group.daysLeft} días` : ""}
                   </p>
                 </>
               )}

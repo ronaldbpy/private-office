@@ -12,31 +12,33 @@ async function main() {
   // ---------------------------------------------------------------------
   const axentia = await prisma.entity.upsert({
     where: { id: "axentia-eas" },
-    update: {},
+    update: { colorToken: "cat-1" },
     create: {
       id: "axentia-eas",
       name: "Axentia EAS",
       type: "LEGAL_ENTITY",
       jurisdiction: "Paraguay",
       baseCurrency: "PYG",
+      colorToken: "cat-1",
     },
   });
 
   const amelia = await prisma.entity.upsert({
     where: { id: "casa-amelia-eas" },
-    update: {},
+    update: { colorToken: "cat-2" },
     create: {
       id: "casa-amelia-eas",
       name: "Casa Amelia EAS",
       type: "LEGAL_ENTITY",
       jurisdiction: "Paraguay",
       baseCurrency: "PYG",
+      colorToken: "cat-2",
     },
   });
 
   const personal = await prisma.entity.upsert({
     where: { id: "ruc-personal-ronald" },
-    update: { taxId: "3676596-1" },
+    update: { taxId: "3676596-1", colorToken: "cat-3" },
     create: {
       id: "ruc-personal-ronald",
       name: "RUC Personal — Ronald Alejandro Barrios Duarte",
@@ -44,6 +46,7 @@ async function main() {
       taxId: "3676596-1",
       jurisdiction: "Paraguay",
       baseCurrency: "PYG",
+      colorToken: "cat-3",
     },
   });
 
@@ -64,36 +67,42 @@ async function main() {
       name: "+adkb. Arquitectura & Compañía",
       taxId: "90000001-1",
       email: "contacto@adkb.com.py",
+      colorToken: "cat-4",
     },
     {
       id: "espace-constructora",
       name: "Espace Constructora",
       taxId: "90000002-2",
       email: "contacto@espace.com.py",
+      colorToken: "cat-5",
     },
     {
       id: "3-1-albanileria-hormigon",
       name: "3:1. Albañilería & Hormigón",
       taxId: "90000003-3",
       email: "contacto@3-1.com.py",
+      colorToken: "cat-6",
     },
     {
       id: "luz-agua-instalaciones",
       name: "Luz & Agua Instalaciones",
       taxId: "90000004-4",
       email: "contacto@luzyagua.com.py",
+      colorToken: "cat-7",
     },
     {
       id: "moopa-clean",
       name: "Moopa Clean",
       taxId: "90000005-5",
       email: "contacto@moopaclean.com.py",
+      colorToken: "cat-8",
     },
     {
       id: "arte-pantone",
       name: "arte&pantone",
       taxId: "90000006-6",
       email: "contacto@artepantone.com.py",
+      colorToken: "cat-9",
     },
   ];
 
@@ -101,7 +110,7 @@ async function main() {
   for (const co of constructionCosData) {
     const created = await prisma.entity.upsert({
       where: { id: co.id },
-      update: {},
+      update: { colorToken: co.colorToken },
       create: {
         id: co.id,
         name: co.name,
@@ -113,6 +122,7 @@ async function main() {
         phone: GENERIC_PHONE,
         email: co.email, // placeholder genérico
         status: "pending_incorporation",
+        colorToken: co.colorToken,
       },
     });
     constructionCos.push(created);

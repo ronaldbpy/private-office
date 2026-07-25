@@ -15,6 +15,7 @@ export type Role =
 export type AccessEntry = {
   entityId: string;
   entityName: string;
+  entityColorToken: string | null;
   role: Role;
   // true = este acceso no fue otorgado directamente sobre esta entidad,
   // sino heredado de un UserAccess con cascadesToSubsidiaries=true sobre
@@ -33,6 +34,7 @@ export async function getUserAccess(clerkUserId: string): Promise<AccessEntry[]>
   const direct: AccessEntry[] = rows.map((r) => ({
     entityId: r.entityId,
     entityName: r.entity.name,
+    entityColorToken: r.entity.colorToken,
     role: r.role,
   }));
 
@@ -56,6 +58,7 @@ export async function getUserAccess(clerkUserId: string): Promise<AccessEntry[]>
         cascaded.push({
           entityId: oi.subjectEntityId,
           entityName: oi.subjectEntity.name,
+          entityColorToken: oi.subjectEntity.colorToken,
           role: grant.role,
           cascadedFrom: grant.entity.name,
         });

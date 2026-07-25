@@ -33,6 +33,11 @@ model Entity {
   address      String? // dirección legal/fiscal — puede ser genérica hasta confirmar con la constitución
   phone        String? // contacto genérico hasta confirmar dato real
   email        String? // contacto genérico hasta confirmar dato real
+  // Identificador visual estable para esta entidad (ej: "cat-1".."cat-9"),
+  // usado en el dashboard para marcar qué empresa comparte un mismo
+  // vencimiento tributario de un vistazo. Token, no un hex directo, para que
+  // el color se resuelva vía CSS y respete dark mode (ver globals.css).
+  colorToken   String?
   status       String     @default("active") // active | pending_incorporation | suspended | closed (MD-300 invariant: nunca se borra)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
