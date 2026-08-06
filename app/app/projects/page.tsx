@@ -41,6 +41,7 @@ export default function ProjectsPage() {
     title: "",
     description: "",
   });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -89,6 +90,28 @@ export default function ProjectsPage() {
         message: err instanceof Error ? err.message : "Error creando proyecto",
         type: "error",
       });
+    }
+  }
+
+  async function handleDeleteProject(id: string) {
+    if (!confirm("¿Eliminar este proyecto?")) return;
+
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/v1/projects/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      setToast({ message: "Proyecto eliminado", type: "success" });
+      fetchProjects();
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : "Error eliminando proyecto",
+        type: "error",
+      });
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -228,57 +251,68 @@ export default function ProjectsPage() {
                     : 0;
 
                 return (
-                  <Link
+                  <div
                     key={p.id}
-                    href={`/projects/${p.id}`}
                     className="rounded border border-border-soft bg-bg-secondary p-4 transition hover:bg-bg-tertiary"
                   >
-                    <div className="mb-2 flex items-start justify-between">
-                      <h3 className="font-medium text-text-primary">
-                        {p.title}
-                      </h3>
-                      <span
-                        className={`rounded px-2 py-1 text-xs font-semibold ${
-                          p.status === "completed"
-                            ? "bg-green-500/20 text-green-600"
-                            : p.status === "archived"
-                              ? "bg-gray-500/20 text-gray-600"
-                              : "bg-blue-500/20 text-blue-600"
-                        }`}
-                      >
-                        {p.status === "active"
-                          ? "Activo"
-                          : p.status === "completed"
-                            ? "Completado"
-                            : "Archivado"}
-                      </span>
-                    </div>
-
-                    {p.description && (
-                      <p className="mb-3 text-sm text-text-secondary">
-                        {p.description}
-                      </p>
-                    )}
-
-                    <div className="mb-3 flex items-center justify-between text-xs text-text-tertiary">
-                      <span>
-                        {p.tasks.length} tarea{p.tasks.length !== 1 ? "s" : ""}
-                      </span>
-                      <span>Creado: {formatDatePY(new Date(p.createdAt))}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 rounded-full bg-border-soft py-1">
-                        <div
-                          className="h-full rounded-full bg-accent transition"
-                          style={{ width: `${progress}%` }}
-                        />
+                    <Link href={`/projects/${p.id}`} className="block">
+                      <div className="mb-2 flex items-start justify-between">
+                        <h3 className="font-medium text-text-primary">
+                          {p.title}
+                        </h3>
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-semibold ${
+                            p.status === "completed"
+                              ? "bg-green-500/20 text-green-600"
+                              : p.status === "archived"
+                                ? "bg-gray-500/20 text-gray-600"
+                                : "bg-blue-500/20 text-blue-600"
+                          }`}
+                        >
+                          {p.status === "active"
+                            ? "Activo"
+                            : p.status === "completed"
+                              ? "Completado"
+                              : "Archivado"}
+                        </span>
                       </div>
-                      <span className="text-xs text-text-secondary">
-                        {progress}%
-                      </span>
+
+                      {p.description && (
+                        <p className="mb-3 text-sm text-text-secondary">
+                          {p.description}
+                        </p>
+                      )}
+
+                      <div className="mb-3 flex items-center justify-between text-xs text-text-tertiary">
+                        <span>
+                          {p.tasks.length} tarea{p.tasks.length !== 1 ? "s" : ""}
+                        </span>
+                        <span>Creado: {formatDatePY(new Date(p.createdAt))}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 rounded-full bg-border-soft py-1">
+                          <div
+                            className="h-full rounded-full bg-accent transition"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-text-secondary">
+                          {progress}%
+                        </span>
+                      </div>
+                    </Link>
+
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        onClick={() => handleDeleteProject(p.id)}
+                        disabled={deletingId === p.id}
+                        className="text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {deletingId === p.id ? "Eliminando..." : "Eliminar"}
+                      </button>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
