@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { nextDueDate, daysUntil, formatDatePY } from "@/lib/dueDates";
 import { getUserAccess, accessibleEntityIds } from "@/lib/access";
 import { VaultSection } from "@/components/VaultSection";
+import { TreasurySection } from "@/components/TreasurySection";
 
 function Badge({
   tone,
@@ -195,6 +196,27 @@ export default async function Home() {
   const vaultEntities = access.map((a) => ({
     id: a.entityId,
     name: a.entityName,
+  }));
+
+  // FS-006: cuentas bancarias y saldos (Treasury)
+  const accounts = await prisma.account.findMany({
+    where: { entityId: { in: entityIds } },
+    include: {
+      balances: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { entity: { name: "asc" } },
+  });
+  const treasuryAccounts = accounts.map((acc) => ({
+    id: acc.id,
+    accountName: acc.accountName,
+    accountNumber: acc.accountNumber,
+    provider: acc.provider,
+    currency: acc.currency,
+    currentBalance: acc.balances[0]?.amount.toNumber() ?? 0,
+    balanceAsOf: acc.balances[0]?.asOfDate ?? new Date(),
   }));
 
   // Agrupar participaciones por empresa (ahora una empresa puede tener
@@ -477,6 +499,10 @@ export default async function Home() {
             </div>
           ))
         )}
+      </SectionCard>
+
+      <SectionCard eyebrow="FS-006" title="Treasury — Cuentas bancarias">
+        <TreasurySection accounts={treasuryAccounts} />
       </SectionCard>
 
       <SectionCard eyebrow="FS-016" title="Vault">
