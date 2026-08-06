@@ -23,6 +23,8 @@ export default function DocumentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -81,6 +83,25 @@ export default function DocumentsPage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error descargando");
+    }
+  }
+
+  async function handleDeleteDocument() {
+    if (!confirmDeleteId) return;
+
+    setDeletingId(confirmDeleteId);
+    try {
+      const res = await fetch(`/api/v1/documents/${confirmDeleteId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      setConfirmDeleteId(null);
+      fetchDocuments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error eliminando documento");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -154,14 +175,50 @@ export default function DocumentsPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => handleDownload(doc.id, doc.fileName)}
-                className="ml-4 rounded bg-accent px-3 py-1 text-xs text-white hover:bg-accent/90 whitespace-nowrap"
-              >
-                Descargar
-              </button>
+              <div className="ml-4 flex gap-2">
+                <button
+                  onClick={() => handleDownload(doc.id, doc.fileName)}
+                  className="rounded bg-accent px-3 py-1 text-xs text-white hover:bg-accent/90 whitespace-nowrap"
+                >
+                  Descargar
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(doc.id)}
+                  disabled={deletingId === doc.id}
+                  className="rounded text-xs text-red-600 hover:text-red-700 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {deletingId === doc.id ? "Eliminando..." : "Eliminar"}
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded border border-border-soft bg-bg-secondary p-6">
+            <h3 className="mb-4 font-semibold text-text-primary">
+              ¿Eliminar este documento?
+            </h3>
+            <p className="mb-6 text-sm text-text-secondary">
+              Esta acción no puede ser revertida.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteDocument}
+                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
