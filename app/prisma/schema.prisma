@@ -49,6 +49,7 @@ model Entity {
   ownedInterests   OwnershipInterest[] @relation("OwnerOf") // participaciones que ESTA entidad posee en otras
   interestsHeldBy  OwnershipInterest[] @relation("OwnedBy") // participaciones que otros poseen SOBRE esta entidad
   accounts     Account[] @relation("EntityAccounts")
+  projects     Project[] @relation("EntityProjects")
 
   @@map("entities")
 }
@@ -372,4 +373,59 @@ model AccountMovement {
   classification String? // categoría o tipo de movimiento (ej: "transfer", "fee", "salary")
 
   @@map("account_movements")
+}
+
+// ---------------------------------------------------------------------------
+// TASK MANAGEMENT (FS-013) — Proyectos y tareas
+// ---------------------------------------------------------------------------
+
+model Project {
+  id          String    @id @default(uuid())
+  entityId    String
+  entity      Entity    @relation("EntityProjects", fields: [entityId], references: [id])
+
+  title       String
+  description String?
+  status      String    @default("active") // active | archived | completed
+  createdBy   String    // clerkUserId
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tasks       Task[]
+
+  @@map("projects")
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id])
+
+  title       String
+  description String?
+  status      String    @default("open") // open | in_progress | completed | closed
+  priority    String    @default("medium") // low | medium | high | urgent
+
+  assignedTo  String? // clerkUserId (puede estar sin asignar)
+  dueDate     DateTime?
+
+  createdBy   String    // clerkUserId
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  comments    TaskComment[]
+
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+
+  content   String
+  author    String   // clerkUserId
+  createdAt DateTime @default(now())
+
+  @@map("task_comments")
 }

@@ -150,6 +150,69 @@ async function main() {
   });
   console.log("✓ Created sample transactions");
 
+  // Crear proyectos para Axentia (FS-013)
+  const constructionProject = await prisma.project.create({
+    data: {
+      entityId: axentia.id,
+      title: "Construcción Casa Amelia — Fase 1",
+      description:
+        "Preparación de terreno y cimientos para nueva propiedad residencial",
+      status: "in_progress",
+      createdBy: ronaldClerkId,
+    },
+  });
+  console.log("✓ Created construction project");
+
+  // Tareas en el proyecto
+  const taskSurvey = await prisma.task.create({
+    data: {
+      projectId: constructionProject.id,
+      title: "Levantamiento topográfico del terreno",
+      description: "Solicitar y gestionar survey profesional del lote",
+      status: "completed",
+      priority: "high",
+      dueDate: new Date("2026-07-15"),
+      createdBy: ronaldClerkId,
+    },
+  });
+
+  const taskPermits = await prisma.task.create({
+    data: {
+      projectId: constructionProject.id,
+      title: "Trámite de permisos municipales",
+      description: "Presentar planos y obtener permisos de construcción",
+      status: "in_progress",
+      priority: "urgent",
+      assignedTo: ronaldClerkId,
+      dueDate: new Date("2026-08-20"),
+      createdBy: ronaldClerkId,
+    },
+  });
+
+  const taskBudget = await prisma.task.create({
+    data: {
+      projectId: constructionProject.id,
+      title: "Presupuesto y cotizaciones de constructora",
+      description: "Cotizar con 3+ contratistas y comparar propuestas",
+      status: "open",
+      priority: "high",
+      dueDate: new Date("2026-08-30"),
+      createdBy: ronaldClerkId,
+    },
+  });
+
+  // Comentario en tarea
+  await prisma.taskComment.create({
+    data: {
+      taskId: taskPermits.id,
+      content:
+        "Municipalidad solicita planos adicionales de servicios (agua, electricidad, gas)",
+      author: ronaldClerkId,
+    },
+  });
+
+  console.log("✓ Created project with 3 tasks");
+
   console.log("\n✅ Seed completed successfully!");
 }
 
