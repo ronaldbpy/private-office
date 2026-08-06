@@ -1,6 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getUserAccess, accessibleEntityIds } from "@/lib/access";
+import { getAuthUserId } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const userId = await getAuthUserId();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -76,7 +76,7 @@ export async function HEAD(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const userId = await getAuthUserId();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
