@@ -5,6 +5,7 @@ import { nextDueDate, daysUntil, formatDatePY } from "@/lib/dueDates";
 import { getUserAccess, accessibleEntityIds } from "@/lib/access";
 import { VaultSection } from "@/components/VaultSection";
 import { TreasurySection } from "@/components/TreasurySection";
+import { TimelineSection } from "@/components/TimelineSection";
 
 function Badge({
   tone,
@@ -228,6 +229,30 @@ export default async function Home() {
     balanceAsOf: acc.balances[0]?.asOfDate ?? new Date(),
   }));
 
+  // FS-002: Timeline events (últimos 12)
+  const timelineEvents = await prisma.timelineEvent.findMany({
+    where: {
+      OR: [
+        { entityId: { in: entityIds } },
+        { entityId: null }, // eventos globales
+      ],
+    },
+    include: {
+      entity: { select: { name: true, colorToken: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+  const timelineItems = timelineEvents.map((event) => ({
+    id: event.id,
+    eventType: event.eventType,
+    description: event.description,
+    changedBy: event.changedBy,
+    createdAt: event.createdAt,
+    entityName: event.entity?.name,
+    entityColorToken: event.entity?.colorToken,
+  }));
+
   // Agrupar participaciones por empresa (ahora una empresa puede tener
   // varios owners a la vez, ej: Axentia EAS 50% + Alexis De Kermenguy 50%).
   const ownershipByEntity = new Map<string, typeof ownershipInterests>();
@@ -287,46 +312,6 @@ export default async function Home() {
     informational: 2,
   };
   attentionItems.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
-
-  // ---------------------------------------------------------------------
-  // Actividad reciente (FS-002, versión liviana) — mismo principio: nada
-  // nuevo, solo se combinan fechas `createdAt` que ya existen en 3 tablas
-  // distintas (entidad creada, documento subido, participación registrada)
-  // en una sola línea de tiempo ordenada.
-  // ---------------------------------------------------------------------
-  type ActivityItem = {
-    id: string;
-    date: Date;
-    text: string;
-    colorToken?: string | null;
-  };
-  const activityItems: ActivityItem[] = [
-    ...Array.from(ownershipByEntity.values()).map((group) => {
-      const entity = group[0].subjectEntity;
-      return {
-        id: `entity-${entity.id}`,
-        date: entity.createdAt,
-        text: `${entity.name} — entidad creada en el sistema`,
-        colorToken: entity.colorToken,
-      };
-    }),
-    ...documents.map((d) => ({
-      id: `doc-${d.id}`,
-      date: d.createdAt,
-      text: `Documento subido: “${d.title}”`,
-      colorToken: d.entityLinks[0]?.entity.colorToken ?? null,
-    })),
-    ...ownershipInterests.map((oi) => ({
-      id: `oi-${oi.id}`,
-      date: oi.createdAt,
-      text: `Participación registrada en ${oi.subjectEntity.name}${
-        oi.percentage ? ` (${Number(oi.percentage)}%)` : ""
-      }`,
-      colorToken: oi.subjectEntity.colorToken,
-    })),
-  ]
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, 12);
 
   const relationshipLabels: Record<string, string> = {
     SUPPLIER: "Proveedor",
@@ -552,29 +537,8 @@ export default async function Home() {
         ))}
       </SectionCard>
 
-      <SectionCard eyebrow="FS-002" title="Actividad reciente">
-        {activityItems.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-text-secondary">
-            Todavía no hay actividad registrada.
-          </p>
-        ) : (
-          activityItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-5 py-3.5"
-            >
-              <div className="flex min-w-0 flex-1 items-start gap-2">
-                <span className="mt-1">
-                  <EntityDot name="" colorToken={item.colorToken ?? null} />
-                </span>
-                <p className="text-sm text-text-primary">{item.text}</p>
-              </div>
-              <p className="tabular shrink-0 text-xs text-text-tertiary">
-                {formatDatePY(item.date)}
-              </p>
-            </div>
-          ))
-        )}
+      <SectionCard eyebrow="FS-002" title="Timeline de eventos">
+        <TimelineSection events={timelineItems} />
       </SectionCard>
     </main>
   );
