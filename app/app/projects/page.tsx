@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDatePY } from "@/lib/dueDates";
 import { Toast } from "@/components/Toast";
+import { SkeletonGrid } from "@/components/Skeleton";
 
 interface Project {
   id: string;
@@ -98,7 +99,15 @@ export default function ProjectsPage() {
   );
 
   if (loading)
-    return <p className="px-5 py-4 text-sm text-text-secondary">Cargando proyectos...</p>;
+    return (
+      <div className="px-5 py-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Proyectos</h1>
+          <div className="h-10 w-32 animate-pulse rounded bg-text-secondary/20" />
+        </div>
+        <SkeletonGrid count={4} />
+      </div>
+    );
   if (error)
     return <p className="px-5 py-4 text-sm text-red-500">Error: {error}</p>;
 
