@@ -50,6 +50,7 @@ model Entity {
   interestsHeldBy  OwnershipInterest[] @relation("OwnedBy") // participaciones que otros poseen SOBRE esta entidad
   accounts     Account[] @relation("EntityAccounts")
   projects     Project[] @relation("EntityProjects")
+  timelineEvents TimelineEvent[] @relation("EntityTimelineEvents")
 
   @@map("entities")
 }
@@ -429,3 +430,29 @@ model TaskComment {
 
   @@map("task_comments")
 }
+
+// ---------------------------------------------------------------------------
+// TIMELINE EVENTS (FS-002 completo) — Auditoría de cambios
+// ---------------------------------------------------------------------------
+
+model TimelineEvent {
+  id          String   @id @default(uuid())
+  entityId    String?  // nullable: algunos eventos son globales
+  entity      Entity?  @relation("EntityTimelineEvents", fields: [entityId], references: [id])
+
+  eventType   String   // entity_created, document_uploaded, task_created, task_updated, obligation_confirmed, etc.
+  description String
+
+  // Quién hizo el cambio
+  changedBy   String   // clerkUserId
+
+  // Cambios anteriores/nuevos (JSON para flexibilidad)
+  changes     String?  // JSON serializado (antes/después de propiedades)
+
+  createdAt   DateTime @default(now())
+
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("timeline_events")
+}
+

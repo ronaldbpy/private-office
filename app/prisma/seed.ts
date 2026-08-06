@@ -213,6 +213,76 @@ async function main() {
 
   console.log("✓ Created project with 3 tasks");
 
+  // Crear timeline events (auditoría — FS-002)
+  await prisma.timelineEvent.createMany({
+    data: [
+      {
+        entityId: axentia.id,
+        eventType: "entity_created",
+        description: "Entidad Axentia EAS creada en el sistema",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: axentia.id,
+        eventType: "entity_ownership_set",
+        description: "Ronald asignado como 100% propietario",
+        changedBy: ronaldClerkId,
+        changes: JSON.stringify({ owner: "Ronald", percentage: 100 }),
+      },
+      {
+        entityId: axentia.id,
+        eventType: "account_created",
+        description: "Cuenta bancaria Banco Regional del Paraguay agregada",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: axentia.id,
+        eventType: "account_balance_imported",
+        description: "Saldo inicial importado: 15.750.000 PYG",
+        changedBy: ronaldClerkId,
+        changes: JSON.stringify({ amount: 15750000, currency: "PYG" }),
+      },
+      {
+        entityId: axentia.id,
+        eventType: "project_created",
+        description: "Proyecto Construcción Casa Amelia — Fase 1 iniciado",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: axentia.id,
+        eventType: "task_created",
+        description: "Tarea: Levantamiento topográfico del terreno",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: axentia.id,
+        eventType: "task_completed",
+        description: "Levantamiento topográfico completado",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: axentia.id,
+        eventType: "task_created",
+        description:
+          "Tarea: Trámite de permisos municipales (asignada a Ronald)",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: casaAmelia.id,
+        eventType: "entity_created",
+        description: "Entidad Casa Amelia EAS creada como subsidiaria",
+        changedBy: ronaldClerkId,
+      },
+      {
+        entityId: casaAmelia.id,
+        eventType: "entity_ownership_set",
+        description: "Axentia EAS asignada como 100% propietaria",
+        changedBy: ronaldClerkId,
+      },
+    ],
+  });
+  console.log("✓ Created 10 timeline events");
+
   console.log("\n✅ Seed completed successfully!");
 }
 
