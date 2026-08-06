@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { MobileNav } from "./MobileNav";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -11,12 +12,12 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border-soft bg-surface-1" aria-label="Main navigation">
-      <div className="flex items-center justify-between px-5 py-3">
+      <div className="flex items-center justify-between px-5 py-3 relative">
         <div className="flex items-center gap-4 sm:gap-6">
           <Link href="/" className="text-lg font-bold" aria-label="Private Office Home">
             Private Office
           </Link>
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto">
+          <div className="hidden sm:flex gap-2 sm:gap-4">
             <Link
               href="/"
               className={`text-sm transition ${
@@ -92,6 +93,7 @@ export function Navbar() {
               Propiedad
             </Link>
           </div>
+          <MobileNav />
         </div>
         <ThemeToggle />
       </div>
