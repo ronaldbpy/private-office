@@ -27,6 +27,17 @@ export function Navbar() {
               Home
             </Link>
             <Link
+              href="/entities"
+              className={`text-sm transition ${
+                isActive("/entities") ||
+                pathname.startsWith("/entities/")
+                  ? "text-accent font-semibold"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Entidades
+            </Link>
+            <Link
               href="/projects"
               className={`text-sm transition ${
                 isActive("/projects") ||
