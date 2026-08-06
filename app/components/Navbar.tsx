@@ -69,6 +69,16 @@ export function Navbar() {
             >
               IA
             </Link>
+            <Link
+              href="/holdings"
+              className={`text-sm transition ${
+                isActive("/holdings")
+                  ? "text-accent font-semibold"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Propiedad
+            </Link>
           </div>
         </div>
       </div>
