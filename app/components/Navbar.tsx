@@ -10,13 +10,13 @@ export function Navbar() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border-soft bg-surface-1">
+    <nav className="sticky top-0 z-50 border-b border-border-soft bg-surface-1" aria-label="Main navigation">
       <div className="flex items-center justify-between px-5 py-3">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg font-bold">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Link href="/" className="text-lg font-bold" aria-label="Private Office Home">
             Private Office
           </Link>
-          <div className="flex gap-4">
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto">
             <Link
               href="/"
               className={`text-sm transition ${
