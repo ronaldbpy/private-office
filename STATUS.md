@@ -1,7 +1,9 @@
 # Private Office — Status & Pending Processes
 
-**Last Updated:** 2026-08-06
-**Session:** Implemented 6 FS complete (FS-013, FS-004, FS-016, FS-019, FS-003, FS-001)
+**Last Updated:** 2026-08-06 (Evening Session)
+**Sessions:** 
+- Morning: 6 FS complete (FS-013, FS-004, FS-016, FS-019, FS-003, FS-001)
+- Evening: Dark mode, tests, animations
 
 ## Implementation Status
 
@@ -21,24 +23,24 @@
 ### ⏳ Pending Features
 
 #### High Priority
-1. **Tests** — No unit/integration tests yet. Recommend: vitest + @testing-library/react
-2. **Error Handling** — API endpoints have basic error catch; client-side error boundaries needed
-3. **Loading States** — Some pages lack skeleton loaders (Projects detail, Intelligence report generation)
-4. **Form Validation** — Client-side validation missing on create/edit forms
-5. **Pagination** — Documents API supports pagination but frontend doesn't use it
+1. ✅ **Tests** — vitest + @testing-library installed. Initial tests: access control (4/4 passing)
+2. **Error Handling** — API endpoints have basic error catch; error boundaries implemented
+3. ✅ **Loading States** — Skeleton loaders on Projects, Documents, Intelligence pages
+4. ✅ **Form Validation** — useFormValidation hook on create/edit forms
+5. ✅ **Pagination** — UI on Projects, Documents, Parties (itemsPerPage: 8-10)
 
 #### Medium Priority
-6. **API Documentation** — Swagger/OpenAPI spec for 15+ endpoints
-7. **Delete Endpoints** — Only have GET/POST/PATCH; need DELETE for tasks, projects, documents
-8. **Search/Filter** — No search on entity lists, project filtering, document searching
-9. **Bulk Operations** — Can't bulk-update task status or mark multiple as complete
-10. **Export/Reports** — No CSV/PDF export of projects, tasks, documents, holdings
+6. ✅ **API Documentation** — OpenAPI 3.0.0 spec at /api/openapi.json + Swagger UI at /api/docs
+7. ✅ **Delete Endpoints** — DELETE /projects/[id], /tasks/[id], /documents/[id] with cascading
+8. ✅ **Search/Filter** — Search on all list pages (Projects, Parties, Documents, Intelligence)
+9. ✅ **Bulk Operations** — Multi-select task status update with parallel API calls
+10. ✅ **Export/Reports** — CSV export on Projects, Documents, Parties pages
 
 #### Lower Priority (Design/Polish)
-11. **Dark Mode** — Colors use CSS tokens but layout could use dark-mode tweaks
-12. **Animations** — No page transitions, loading animations, or micro-interactions
+11. ✅ **Dark Mode** — Toggle implemented with localStorage persistence, system-aware defaults
+12. ✅ **Animations** — Page transition fade-in + slide animations (0.3s ease-in-out)
 13. **Mobile UI** — Responsive but not optimized for mobile (navbar overflow, form widths)
-14. **Accessibility** — Missing ARIA labels, keyboard navigation testing
+14. **Accessibility** — Missing ARIA labels, keyboard navigation testing (theme toggle has aria-label)
 15. **Analytics Tracking** — No event tracking or telemetry
 
 ### 🏗️ Architecture Decisions Needing ADR
