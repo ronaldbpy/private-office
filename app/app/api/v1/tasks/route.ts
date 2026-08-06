@@ -18,13 +18,22 @@ export async function GET(req: Request) {
       return NextResponse.json({ tasks: [] });
     }
 
+    const url = new URL(req.url);
+    const projectId = url.searchParams.get("projectId");
+
+    let whereClause: any = {
+      project: {
+        entityId: { in: entityIds },
+      },
+    };
+
+    if (projectId) {
+      whereClause.projectId = projectId;
+    }
+
     // Filtrar tasks de proyectos cuya entidad es accesible
     const tasks = await prisma.task.findMany({
-      where: {
-        project: {
-          entityId: { in: entityIds },
-        },
-      },
+      where: whereClause,
       include: {
         project: {
           select: { id: true, title: true, status: true },
@@ -34,7 +43,7 @@ export async function GET(req: Request) {
           take: 5,
         },
       },
-      orderBy: { dueDate: "asc" },
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
 
     return NextResponse.json({ tasks });
