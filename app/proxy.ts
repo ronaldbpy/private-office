@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 
 // Rutas públicas: login, y el health check (INF-001 — debe ser alcanzable
 // por herramientas de monitoreo sin sesión, y no expone datos de negocio).
@@ -7,9 +8,20 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/api/health",
+  "/api(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
+export default clerkMiddleware(async (auth, req: NextRequest) => {
+  // Dev bypass: en desarrollo con DEV_BYPASS=true, permitir acceso sin autenticación
+  if (
+    process.env.NODE_ENV === "development" &&
+    process.env.DEV_BYPASS === "true"
+  ) {
+    // Permitir todas las rutas en dev mode
+    return NextResponse.next();
+  }
+
+  // En producción, proteger rutas no-públicas
   if (!isPublicRoute(req)) {
     await auth.protect();
   }

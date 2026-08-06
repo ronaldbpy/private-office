@@ -73,10 +73,19 @@ function SectionCard({
 }
 
 export default async function Home() {
-  const user = await currentUser();
+  let user = await currentUser();
+
+  // En desarrollo con DEV_BYPASS, usar usuario hardcodeado para testing
+  if (!user && process.env.NODE_ENV === "development" && process.env.DEV_BYPASS === "true") {
+    user = {
+      id: "user_3GvDXLehFYaF4fb0qQpnD73FUEM",
+      firstName: "Ronald",
+      lastName: null,
+      emailAddresses: [{ emailAddress: "ronaldpy@gmail.com" }],
+    } as any;
+  }
 
   if (!user) {
-    // El middleware ya debería haber redirigido a /sign-in antes de esto.
     return null;
   }
 
