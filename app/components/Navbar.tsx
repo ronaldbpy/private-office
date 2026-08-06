@@ -48,6 +48,16 @@ export function Navbar() {
             >
               Contactos
             </Link>
+            <Link
+              href="/documents"
+              className={`text-sm transition ${
+                isActive("/documents")
+                  ? "text-accent font-semibold"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Documentos
+            </Link>
           </div>
         </div>
       </div>
