@@ -51,6 +51,7 @@ model Entity {
   accounts     Account[] @relation("EntityAccounts")
   projects     Project[] @relation("EntityProjects")
   timelineEvents TimelineEvent[] @relation("EntityTimelineEvents")
+  intelligenceReports IntelligenceReport[] @relation("EntityIntelligence")
 
   @@map("entities")
 }
@@ -455,4 +456,33 @@ model TimelineEvent {
   @@index([createdAt])
   @@map("timeline_events")
 }
+
+// ---------------------------------------------------------------------------
+// INTELLIGENCE (FS-019) — Análisis y predicciones con Claude AI
+// ---------------------------------------------------------------------------
+
+model IntelligenceReport {
+  id          String   @id @default(uuid())
+  entityId    String
+  entity      Entity   @relation("EntityIntelligence", fields: [entityId], references: [id])
+
+  reportType  String   // treasury_forecast | project_risk | obligation_alert | cash_flow | etc.
+  title       String
+  summary     String   // breve resumen ejecutivo
+
+  // Análisis completo (puede ser HTML, Markdown, JSON)
+  content     String   @db.Text
+  contentType String   @default("markdown") // markdown | html | json
+
+  confidence  Int?     // 0-100: nivel de confianza del análisis
+
+  requestedBy String   // clerkUserId
+  createdAt   DateTime @default(now())
+
+  @@index([entityId])
+  @@index([reportType])
+  @@index([createdAt])
+  @@map("intelligence_reports")
+}
+
 
