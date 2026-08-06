@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatDatePY } from "@/lib/dueDates";
 import { Toast } from "@/components/Toast";
 import { SkeletonGrid } from "@/components/Skeleton";
+import { useFormValidation } from "@/lib/useFormValidation";
 
 interface Project {
   id: string;
@@ -31,6 +32,10 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const { errors, validate, clearAllErrors } = useFormValidation({
+    entityId: { required: true },
+    title: { required: true, minLength: 3, maxLength: 100 },
+  });
   const [createData, setCreateData] = useState({
     entityId: "",
     title: "",
@@ -55,8 +60,11 @@ export default function ProjectsPage() {
   }
 
   async function handleCreateProject() {
-    if (!createData.entityId || !createData.title) {
-      setToast({ message: "Completá entity y title", type: "error" });
+    if (!validate(createData)) {
+      setToast({
+        message: Object.values(errors)[0] || "Completa los campos requeridos",
+        type: "error"
+      });
       return;
     }
 
@@ -139,7 +147,9 @@ export default function ProjectsPage() {
               onChange={(e) =>
                 setCreateData({ ...createData, entityId: e.target.value })
               }
-              className="w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary"
+              className={`w-full rounded border px-3 py-2 text-sm text-text-primary bg-bg-tertiary ${
+                errors.entityId ? "border-red-500/50" : "border-border-soft"
+              }`}
             >
               <option value="">Seleccionar entity...</option>
               {Object.values(groupedByEntity).map(({ entity }) => (
@@ -148,6 +158,7 @@ export default function ProjectsPage() {
                 </option>
               ))}
             </select>
+            {errors.entityId && <p className="mt-1 text-xs text-red-500">{errors.entityId}</p>}
           </div>
 
           <div className="mb-4">
@@ -159,8 +170,11 @@ export default function ProjectsPage() {
                 setCreateData({ ...createData, title: e.target.value })
               }
               placeholder="Título del proyecto"
-              className="w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
+              className={`w-full rounded border px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary bg-bg-tertiary ${
+                errors.title ? "border-red-500/50" : "border-border-soft"
+              }`}
             />
+            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
           </div>
 
           <div className="mb-4">
