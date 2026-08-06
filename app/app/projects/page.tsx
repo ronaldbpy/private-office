@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDatePY } from "@/lib/dueDates";
+import { Toast } from "@/components/Toast";
 
 interface Project {
   id: string;
@@ -28,6 +29,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [createData, setCreateData] = useState({
     entityId: "",
     title: "",
@@ -53,7 +55,7 @@ export default function ProjectsPage() {
 
   async function handleCreateProject() {
     if (!createData.entityId || !createData.title) {
-      alert("Completá entity y title");
+      setToast({ message: "Completá entity y title", type: "error" });
       return;
     }
 
@@ -71,9 +73,13 @@ export default function ProjectsPage() {
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       setCreateData({ entityId: "", title: "", description: "" });
       setShowCreateForm(false);
+      setToast({ message: "Proyecto creado", type: "success" });
       fetchProjects();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error creando proyecto");
+      setToast({
+        message: err instanceof Error ? err.message : "Error creando proyecto",
+        type: "error",
+      });
     }
   }
 
@@ -98,6 +104,13 @@ export default function ProjectsPage() {
 
   return (
     <div className="px-5 py-6">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Proyectos</h1>
         <button
