@@ -58,6 +58,17 @@ export function Navbar() {
             >
               Documentos
             </Link>
+            <Link
+              href="/intelligence"
+              className={`text-sm transition ${
+                isActive("/intelligence") ||
+                pathname.startsWith("/intelligence/")
+                  ? "text-accent font-semibold"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              IA
+            </Link>
           </div>
         </div>
       </div>
