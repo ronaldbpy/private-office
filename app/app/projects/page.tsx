@@ -424,7 +424,7 @@ export default function ProjectsPage() {
             </div>
           </div>
         ))
-      }
+      )}
 
       {Object.keys(groupedByEntity).length > 0 && totalPages > 1 && (
         <div className="mt-6 flex items-center justify-center gap-2">
