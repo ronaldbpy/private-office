@@ -104,17 +104,52 @@ export default function PartiesPage() {
     {} as Record<string, Party[]>
   );
 
+  const exportToCSV = () => {
+    const headers = ["ID", "Nombre", "Email", "Teléfono", "Tipo", "Estado", "Fecha Creación"];
+    const rows = filteredParties.map((p) => [
+      p.id,
+      p.fullName,
+      p.email || "-",
+      p.phone || "-",
+      relationshipLabels[p.relationshipType] || p.relationshipType,
+      p.status,
+      new Date(p.createdAt).toLocaleDateString("es-PY"),
+    ]);
+
+    const csv =
+      [headers, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `contactos-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="px-5 py-6">
       <div className="mb-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Contactos</h1>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
-          >
-            {showCreateForm ? "Cancelar" : "+ Nuevo Contacto"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exportToCSV}
+              disabled={filteredParties.length === 0}
+              className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              📥 Exportar CSV
+            </button>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
+            >
+              {showCreateForm ? "Cancelar" : "+ Nuevo Contacto"}
+            </button>
+          </div>
         </div>
         <input
           type="text"

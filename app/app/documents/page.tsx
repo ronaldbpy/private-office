@@ -116,6 +116,31 @@ export default function DocumentsPage() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  const exportToCSV = () => {
+    const headers = ["ID", "Nombre", "Tamaño", "Tipo", "Entities", "Fecha Subida"];
+    const rows = filteredDocuments.map((d) => [
+      d.id,
+      d.fileName,
+      formatFileSize(d.fileSize),
+      d.mimeType,
+      d.entityLinks.map((l) => l.entity.name).join("; ") || "-",
+      new Date(d.createdAt).toLocaleDateString("es-PY"),
+    ]);
+
+    const csv =
+      [headers, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `documentos-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   if (loading)
     return <p className="px-5 py-4 text-sm text-text-secondary">Cargando documentos...</p>;
   if (error)
@@ -136,13 +161,22 @@ export default function DocumentsPage() {
   return (
     <div className="px-5 py-6">
       <div className="mb-6">
-        <h1 className="mb-4 text-2xl font-bold">Documentos</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Documentos</h1>
+          <button
+            onClick={exportToCSV}
+            disabled={filteredDocuments.length === 0}
+            className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            📥 Exportar CSV
+          </button>
+        </div>
         <input
           type="text"
           placeholder="Buscar por nombre de archivo..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="mb-4 w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
+          className="w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
         />
 
         <div className="rounded border border-border-soft bg-bg-secondary p-4">

@@ -160,6 +160,40 @@ export default function ProjectsPage() {
     [] as Project["entity"][]
   );
 
+  const exportToCSV = () => {
+    const headers = ["ID", "Título", "Descripción", "Estado", "Entity", "Tareas", "Progreso", "Fecha Creación"];
+    const rows = filteredProjects.map((p) => {
+      const completedTasks = p.tasks.filter((t) => t.status === "completed").length;
+      const progress =
+        p.tasks.length > 0
+          ? Math.round((completedTasks / p.tasks.length) * 100)
+          : 0;
+      return [
+        p.id,
+        p.title,
+        p.description || "",
+        p.status,
+        p.entity.name,
+        p.tasks.length,
+        `${progress}%`,
+        new Date(p.createdAt).toLocaleDateString("es-PY"),
+      ];
+    });
+
+    const csv =
+      [headers, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `proyectos-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   if (loading)
     return (
       <div className="px-5 py-6">
@@ -185,12 +219,21 @@ export default function ProjectsPage() {
       <div className="mb-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Proyectos</h1>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
-          >
-            {showCreateForm ? "Cancelar" : "+ Nuevo Proyecto"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exportToCSV}
+              disabled={filteredProjects.length === 0}
+              className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              📥 Exportar CSV
+            </button>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
+            >
+              {showCreateForm ? "Cancelar" : "+ Nuevo Proyecto"}
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-3">
