@@ -6,6 +6,7 @@ import { formatDatePY } from "@/lib/dueDates";
 import { Toast } from "@/components/Toast";
 import { SkeletonGrid } from "@/components/Skeleton";
 import { useFormValidation } from "@/lib/useFormValidation";
+import { PageTransition } from "@/components/PageTransition";
 
 interface Project {
   id: string;
@@ -208,7 +209,8 @@ export default function ProjectsPage() {
     return <p className="px-5 py-4 text-sm text-red-500">Error: {error}</p>;
 
   return (
-    <div className="px-5 py-6">
+    <PageTransition>
+      <div className="px-5 py-6">
       {toast && (
         <Toast
           message={toast.message}
@@ -474,6 +476,7 @@ export default function ProjectsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PageTransition>
   );
 }

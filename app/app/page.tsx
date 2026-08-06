@@ -6,6 +6,7 @@ import { getUserAccess, accessibleEntityIds } from "@/lib/access";
 import { VaultSection } from "@/components/VaultSection";
 import { TreasurySection } from "@/components/TreasurySection";
 import { TimelineSection } from "@/components/TimelineSection";
+import { PageTransition } from "@/components/PageTransition";
 
 function Badge({
   tone,
@@ -99,16 +100,18 @@ export default async function Home() {
   // nunca un error ni datos de otra persona.
   if (entityIds.length === 0) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-4 p-8 text-center">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl text-text-primary">
-          Private Office
-        </h1>
-        <p className="text-text-secondary">
-          Tu usuario todavía no tiene ninguna empresa asignada. Pedile al
-          Owner que te dé acceso desde la administración del sistema.
-        </p>
-        <UserButton />
-      </main>
+      <PageTransition>
+        <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-4 p-8 text-center">
+          <h1 className="font-[family-name:var(--font-display)] text-2xl text-text-primary">
+            Private Office
+          </h1>
+          <p className="text-text-secondary">
+            Tu usuario todavía no tiene ninguna empresa asignada. Pedile al
+            Owner que te dé acceso desde la administración del sistema.
+          </p>
+          <UserButton />
+        </main>
+      </PageTransition>
     );
   }
 
@@ -324,7 +327,8 @@ export default async function Home() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10 sm:px-8">
+    <PageTransition>
+      <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10 sm:px-8">
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">
@@ -540,6 +544,7 @@ export default async function Home() {
       <SectionCard eyebrow="FS-002" title="Timeline de eventos">
         <TimelineSection events={timelineItems} />
       </SectionCard>
-    </main>
+      </main>
+    </PageTransition>
   );
 }
