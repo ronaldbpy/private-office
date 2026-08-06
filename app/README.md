@@ -34,17 +34,22 @@ el cliente de Prisma viejo en memoria. Detalle completo en `CLAUDE.md`.
 
 ## Qué hay implementado hoy
 
-- **FS-003** Estructura de propiedad (holdings, participaciones, cascada de
-  acceso — ver [ADR-006](../docs/06_ADR/ADR-006_CONSTRUCTION_GROUP_HOLDING_STRUCTURE.md)
-  y [ADR-007](../docs/06_ADR/ADR-007_CASCADING_HOLDING_ACCESS.md)).
-- **FS-004** Contactos (parties externos, sin login).
-- **FS-005** Identidad, roles y acceso (`lib/access.ts`).
-- **FS-016** Vault — subida/descarga de documentos con control de acceso.
-  Storage v1 es disco local (`.vault-storage/`, gitignored) — placeholder
-  deliberado hasta decidir un object storage real por ADR.
-- **FS-017** Obligaciones tributarias, agrupadas por código de vencimiento.
-- **FS-001 / FS-002** (versiones livianas) Cola de atención y actividad
-  reciente, ambas derivadas de datos ya existentes, sin tablas nuevas.
+**Core Features (UI + API):**
+- **FS-001** Entities directory & details (list empresas, info, quick nav)
+- **FS-002** Timeline auditoría (event sourcing, UI component, 12+ eventos por entity)
+- **FS-003** Holdings/Ownership (estructura propiedad, participaciones, verificación)
+- **FS-004** Parties/Contactos (directorio, CRUD, tipos relación, banking details)
+- **FS-005** Identity, roles & access (`lib/access.ts`, cascada de acceso)
+- **FS-006** Treasury (saldos bancarios, movimientos, balance tracking)
+- **FS-007** API Endpoints (15+ read/write endpoints, access control)
+- **FS-013** Projects & Tasks (list/detail, CRUD, status/priority, comments)
+- **FS-016** Vault (upload/download documentos, storage local v1)
+- **FS-017** Obligaciones tributarias (lista, due rules, confirmation state)
+- **FS-019** Intelligence (reportes Claude AI, treasury/risk/obligation analysis)
+
+**Navigation:**
+- Navbar: Home → Entidades → Proyectos → Contactos → Documentos → IA → Propiedad
+- 6 full-featured pages + home dashboard + detail views
 
 ## Estructura
 
