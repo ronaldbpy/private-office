@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -9,7 +10,7 @@ export function Navbar() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border-soft bg-bg-primary">
+    <nav className="sticky top-0 z-50 border-b border-border-soft bg-surface-1">
       <div className="flex items-center justify-between px-5 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-bold">
@@ -92,6 +93,7 @@ export function Navbar() {
             </Link>
           </div>
         </div>
+        <ThemeToggle />
       </div>
     </nav>
   );
