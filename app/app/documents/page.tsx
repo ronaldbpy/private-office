@@ -25,6 +25,7 @@ export default function DocumentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchDocuments();
@@ -118,10 +119,23 @@ export default function DocumentsPage() {
   if (error)
     return <p className="px-5 py-4 text-sm text-red-500">Error: {error}</p>;
 
+  const filteredDocuments = documents.filter(
+    (d) =>
+      searchQuery === "" ||
+      d.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="px-5 py-6">
       <div className="mb-6">
         <h1 className="mb-4 text-2xl font-bold">Documentos</h1>
+        <input
+          type="text"
+          placeholder="Buscar por nombre de archivo..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="mb-4 w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
+        />
 
         <div className="rounded border border-border-soft bg-bg-secondary p-4">
           <label className="mb-4 block">
@@ -150,14 +164,16 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {documents.length === 0 ? (
+      {filteredDocuments.length === 0 ? (
         <p className="text-sm text-text-secondary">
-          Sin documentos aún. Sube uno para empezar.
+          {searchQuery
+            ? "Sin documentos que coincidan con la búsqueda."
+            : "Sin documentos aún. Sube uno para empezar."}
         </p>
       ) : (
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold mb-4">{documents.length} Documentos</h2>
-          {documents.map((doc) => (
+          <h2 className="text-lg font-semibold mb-4">{filteredDocuments.length} Documentos</h2>
+          {filteredDocuments.map((doc) => (
             <div
               key={doc.id}
               className="flex items-center justify-between rounded border border-border-soft bg-bg-secondary p-4"

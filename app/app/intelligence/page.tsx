@@ -37,6 +37,7 @@ export default function IntelligencePage() {
   const [generating, setGenerating] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState("");
   const [selectedType, setSelectedType] = useState("treasury_forecast");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     Promise.all([fetchReports(), fetchEntities()]).finally(() =>
@@ -98,7 +99,14 @@ export default function IntelligencePage() {
   if (error)
     return <p className="px-5 py-4 text-sm text-red-500">Error: {error}</p>;
 
-  const byEntity = reports.reduce(
+  const filteredReports = reports.filter(
+    (r) =>
+      searchQuery === "" ||
+      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.summary.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const byEntity = filteredReports.reduce(
     (acc, r) => {
       if (!acc[r.entity.id]) {
         acc[r.entity.id] = {
@@ -115,6 +123,14 @@ export default function IntelligencePage() {
   return (
     <div className="px-5 py-6">
       <h1 className="mb-6 text-2xl font-bold">Inteligencia (AI)</h1>
+
+      <input
+        type="text"
+        placeholder="Buscar por título o resumen..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="mb-6 w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
+      />
 
       <div className="mb-6 rounded border border-border-soft bg-bg-secondary p-4">
         <div className="mb-4">
@@ -159,7 +175,9 @@ export default function IntelligencePage() {
 
       {Object.keys(byEntity).length === 0 ? (
         <p className="text-sm text-text-secondary">
-          Sin reportes aún. Genera uno para empezar.
+          {searchQuery
+            ? "Sin reportes que coincidan con la búsqueda."
+            : "Sin reportes aún. Genera uno para empezar."}
         </p>
       ) : (
         Object.entries(byEntity).map(([entityId, { entity, reports: rpts }]) => (

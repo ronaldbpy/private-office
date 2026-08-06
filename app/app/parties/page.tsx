@@ -28,6 +28,7 @@ export default function PartiesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [createData, setCreateData] = useState({
     fullName: "",
     email: "",
@@ -84,7 +85,15 @@ export default function PartiesPage() {
   if (error)
     return <p className="px-5 py-4 text-sm text-red-500">Error: {error}</p>;
 
-  const byRelationship = parties.reduce(
+  const filteredParties = parties.filter(
+    (p) =>
+      searchQuery === "" ||
+      p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.phone?.includes(searchQuery)
+  );
+
+  const byRelationship = filteredParties.reduce(
     (acc, p) => {
       if (!acc[p.relationshipType]) {
         acc[p.relationshipType] = [];
@@ -97,14 +106,23 @@ export default function PartiesPage() {
 
   return (
     <div className="px-5 py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Contactos</h1>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
-        >
-          {showCreateForm ? "Cancelar" : "+ Nuevo Contacto"}
-        </button>
+      <div className="mb-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Contactos</h1>
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
+          >
+            {showCreateForm ? "Cancelar" : "+ Nuevo Contacto"}
+          </button>
+        </div>
+        <input
+          type="text"
+          placeholder="Buscar por nombre, email o teléfono..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
+        />
       </div>
 
       {showCreateForm && (
@@ -178,7 +196,9 @@ export default function PartiesPage() {
 
       {Object.keys(byRelationship).length === 0 ? (
         <p className="text-sm text-text-secondary">
-          Sin contactos aún. Creá uno para empezar.
+          {searchQuery
+            ? "Sin contactos que coincidan con la búsqueda."
+            : "Sin contactos aún. Creá uno para empezar."}
         </p>
       ) : (
         Object.entries(byRelationship).map(([type, items]) => (

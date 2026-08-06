@@ -32,6 +32,8 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterEntity, setFilterEntity] = useState("");
   const { errors, validate, clearAllErrors } = useFormValidation({
     entityId: { required: true },
     title: { required: true, minLength: 3, maxLength: 100 },
@@ -117,7 +119,16 @@ export default function ProjectsPage() {
     }
   }
 
-  const groupedByEntity = projects.reduce(
+  const filteredProjects = projects.filter((p) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesEntity = filterEntity === "" || p.entity.id === filterEntity;
+    return matchesSearch && matchesEntity;
+  });
+
+  const groupedByEntity = filteredProjects.reduce(
     (acc, p) => {
       if (!acc[p.entity.id]) {
         acc[p.entity.id] = {
@@ -129,6 +140,16 @@ export default function ProjectsPage() {
       return acc;
     },
     {} as Record<string, { entity: Project["entity"]; projects: Project[] }>
+  );
+
+  const allEntities = projects.reduce(
+    (acc, p) => {
+      if (!acc.find((e) => e.id === p.entity.id)) {
+        acc.push(p.entity);
+      }
+      return acc;
+    },
+    [] as Project["entity"][]
   );
 
   if (loading)
@@ -153,14 +174,38 @@ export default function ProjectsPage() {
           onClose={() => setToast(null)}
         />
       )}
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Proyectos</h1>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
-        >
-          {showCreateForm ? "Cancelar" : "+ Nuevo Proyecto"}
-        </button>
+      <div className="mb-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Proyectos</h1>
+          <button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
+          >
+            {showCreateForm ? "Cancelar" : "+ Nuevo Proyecto"}
+          </button>
+        </div>
+
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="Buscar por título o descripción..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
+          />
+          <select
+            value={filterEntity}
+            onChange={(e) => setFilterEntity(e.target.value)}
+            className="rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary"
+          >
+            <option value="">Todas las entities</option>
+            {allEntities.map((entity) => (
+              <option key={entity.id} value={entity.id}>
+                {entity.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {showCreateForm && (
@@ -226,7 +271,9 @@ export default function ProjectsPage() {
 
       {Object.keys(groupedByEntity).length === 0 ? (
         <p className="text-sm text-text-secondary">
-          Sin proyectos aún. Creá uno para empezar.
+          {searchQuery || filterEntity
+            ? "Sin proyectos que coincidan con los filtros."
+            : "Sin proyectos aún. Creá uno para empezar."}
         </p>
       ) : (
         Object.entries(groupedByEntity).map(([entityId, { entity, projects: pjts }]) => (
