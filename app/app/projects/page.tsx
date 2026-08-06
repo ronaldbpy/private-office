@@ -34,6 +34,8 @@ export default function ProjectsPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEntity, setFilterEntity] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
   const { errors, validate, clearAllErrors } = useFormValidation({
     entityId: { required: true },
     title: { required: true, minLength: 3, maxLength: 100 },
@@ -128,7 +130,13 @@ export default function ProjectsPage() {
     return matchesSearch && matchesEntity;
   });
 
-  const groupedByEntity = filteredProjects.reduce(
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const groupedByEntity = paginatedProjects.reduce(
     (acc, p) => {
       if (!acc[p.entity.id]) {
         acc[p.entity.id] = {
@@ -190,12 +198,18 @@ export default function ProjectsPage() {
             type="text"
             placeholder="Buscar por título o descripción..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="flex-1 rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary"
           />
           <select
             value={filterEntity}
-            onChange={(e) => setFilterEntity(e.target.value)}
+            onChange={(e) => {
+              setFilterEntity(e.target.value);
+              setCurrentPage(1);
+            }}
             className="rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary"
           >
             <option value="">Todas las entities</option>
@@ -367,6 +381,28 @@ export default function ProjectsPage() {
             </div>
           </div>
         ))
+      }
+
+      {Object.keys(groupedByEntity).length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="rounded border border-border-soft px-3 py-1 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ← Anterior
+          </button>
+          <span className="text-sm text-text-secondary">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="rounded border border-border-soft px-3 py-1 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Siguiente →
+          </button>
+        </div>
       )}
 
       {confirmDelete && (

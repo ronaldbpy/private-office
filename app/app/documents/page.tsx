@@ -26,6 +26,8 @@ export default function DocumentsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchDocuments();
@@ -125,6 +127,12 @@ export default function DocumentsPage() {
       d.fileName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  const paginatedDocuments = filteredDocuments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="px-5 py-6">
       <div className="mb-6">
@@ -171,9 +179,10 @@ export default function DocumentsPage() {
             : "Sin documentos aún. Sube uno para empezar."}
         </p>
       ) : (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold mb-4">{filteredDocuments.length} Documentos</h2>
-          {filteredDocuments.map((doc) => (
+        <>
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold mb-4">{filteredDocuments.length} Documentos</h2>
+            {paginatedDocuments.map((doc) => (
             <div
               key={doc.id}
               className="flex items-center justify-between rounded border border-border-soft bg-bg-secondary p-4"
@@ -208,7 +217,30 @@ export default function DocumentsPage() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="rounded border border-border-soft px-3 py-1 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Anterior
+              </button>
+              <span className="text-sm text-text-secondary">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded border border-border-soft px-3 py-1 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {confirmDeleteId && (
