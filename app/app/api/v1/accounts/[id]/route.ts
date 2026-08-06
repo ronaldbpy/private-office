@@ -5,9 +5,12 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "";
   try {
+    const paramData = await params;
+    id = paramData.id;
     const userId = await getAuthUserId();
 
     if (!userId) {
@@ -19,7 +22,7 @@ export async function GET(
 
     // Verificar acceso a la cuenta (via su entidad)
     const account = await prisma.account.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!account || !entityIds.includes(account.entityId)) {
@@ -27,7 +30,7 @@ export async function GET(
     }
 
     const fullAccount = await prisma.account.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         entity: {
           select: { id: true, name: true, colorToken: true },
@@ -62,7 +65,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(`GET /api/v1/accounts/${params.id} error:`, error);
+    console.error(`GET /api/v1/accounts/${id} error:`, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

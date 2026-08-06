@@ -5,9 +5,12 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "";
   try {
+    const paramData = await params;
+    id = paramData.id;
     const userId = await getAuthUserId();
 
     if (!userId) {
@@ -18,12 +21,12 @@ export async function GET(
     const entityIds = accessibleEntityIds(access);
 
     // Verificar que el usuario tiene acceso a esta entidad
-    if (!entityIds.includes(params.id)) {
+    if (!entityIds.includes(id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const entity = await prisma.entity.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         ownedInterests: {
           include: { owner: true, ownerParty: true, subjectEntity: true },
@@ -51,7 +54,7 @@ export async function GET(
 
     return NextResponse.json({ entity });
   } catch (error) {
-    console.error(`GET /api/v1/entities/${params.id} error:`, error);
+    console.error(`GET /api/v1/entities/${id} error:`, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

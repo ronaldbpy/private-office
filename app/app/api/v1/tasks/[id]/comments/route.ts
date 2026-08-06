@@ -5,9 +5,12 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "";
   try {
+    const paramData = await params;
+    id = paramData.id;
     const userId = await getAuthUserId();
 
     if (!userId) {
@@ -15,7 +18,7 @@ export async function GET(
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { project: { select: { entityId: true } } },
     });
 
@@ -31,14 +34,14 @@ export async function GET(
     }
 
     const comments = await prisma.taskComment.findMany({
-      where: { taskId: params.id },
+      where: { taskId: id },
       orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json({ comments });
   } catch (error) {
     console.error(
-      `GET /api/v1/tasks/${params.id}/comments error:`,
+      `GET /api/v1/tasks/${id}/comments error:`,
       error
     );
     return NextResponse.json(
@@ -50,9 +53,12 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  let id = "";
   try {
+    const paramData = await params;
+    id = paramData.id;
     const userId = await getAuthUserId();
 
     if (!userId) {
@@ -70,7 +76,7 @@ export async function POST(
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: { project: { select: { entityId: true } } },
     });
 
@@ -87,7 +93,7 @@ export async function POST(
 
     const comment = await prisma.taskComment.create({
       data: {
-        taskId: params.id,
+        taskId: id,
         content,
         author: userId,
       },
@@ -96,7 +102,7 @@ export async function POST(
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error) {
     console.error(
-      `POST /api/v1/tasks/${params.id}/comments error:`,
+      `POST /api/v1/tasks/${id}/comments error:`,
       error
     );
     return NextResponse.json(
