@@ -42,6 +42,7 @@ export default function ProjectsPage() {
     description: "",
   });
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -93,17 +94,18 @@ export default function ProjectsPage() {
     }
   }
 
-  async function handleDeleteProject(id: string) {
-    if (!confirm("¿Eliminar este proyecto?")) return;
+  async function handleDeleteProject() {
+    if (!confirmDelete) return;
 
-    setDeletingId(id);
+    setDeletingId(confirmDelete);
     try {
-      const res = await fetch(`/api/v1/projects/${id}`, {
+      const res = await fetch(`/api/v1/projects/${confirmDelete}`, {
         method: "DELETE",
       });
 
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       setToast({ message: "Proyecto eliminado", type: "success" });
+      setConfirmDelete(null);
       fetchProjects();
     } catch (err) {
       setToast({
@@ -305,7 +307,7 @@ export default function ProjectsPage() {
 
                     <div className="mt-4 flex justify-end">
                       <button
-                        onClick={() => handleDeleteProject(p.id)}
+                        onClick={() => setConfirmDelete(p.id)}
                         disabled={deletingId === p.id}
                         className="text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
                       >
@@ -318,6 +320,33 @@ export default function ProjectsPage() {
             </div>
           </div>
         ))
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded border border-border-soft bg-bg-secondary p-6">
+            <h3 className="mb-4 font-semibold text-text-primary">
+              ¿Eliminar este proyecto?
+            </h3>
+            <p className="mb-6 text-sm text-text-secondary">
+              Esta acción no puede ser revertida.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
