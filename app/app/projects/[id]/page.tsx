@@ -46,6 +46,8 @@ export default function ProjectDetailPage() {
   });
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkUpdateStatus, setBulkUpdateStatus] = useState("");
 
   useEffect(() => {
     fetchProject();
@@ -134,6 +136,30 @@ export default function ProjectDetailPage() {
       alert(err instanceof Error ? err.message : "Error eliminando tarea");
     } finally {
       setDeletingTaskId(null);
+    }
+  }
+
+  async function handleBulkUpdate() {
+    if (selectedTaskIds.size === 0 || !bulkUpdateStatus) {
+      alert("Selecciona tareas y un estado");
+      return;
+    }
+
+    try {
+      await Promise.all(
+        Array.from(selectedTaskIds).map((id) =>
+          fetch(`/api/v1/tasks/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: bulkUpdateStatus }),
+          })
+        )
+      );
+      setSelectedTaskIds(new Set());
+      setBulkUpdateStatus("");
+      fetchProject();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error actualizando tareas");
     }
   }
 
@@ -287,7 +313,41 @@ export default function ProjectDetailPage() {
           Sin tareas en este proyecto. Creá una para empezar.
         </p>
       ) : (
-        <div className="grid gap-6">
+        <>
+          {selectedTaskIds.size > 0 && (
+            <div className="mb-6 rounded border border-accent bg-accent/10 p-4">
+              <div className="mb-3 text-sm font-semibold text-text-primary">
+                {selectedTaskIds.size} tarea{selectedTaskIds.size !== 1 ? "s" : ""} seleccionada{selectedTaskIds.size !== 1 ? "s" : ""}
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={bulkUpdateStatus}
+                  onChange={(e) => setBulkUpdateStatus(e.target.value)}
+                  className="rounded border border-border-soft bg-bg-tertiary px-3 py-2 text-sm text-text-primary"
+                >
+                  <option value="">Cambiar estado a...</option>
+                  <option value="open">Por Hacer</option>
+                  <option value="in_progress">En Progreso</option>
+                  <option value="completed">Completada</option>
+                  <option value="closed">Cerrada</option>
+                </select>
+                <button
+                  onClick={handleBulkUpdate}
+                  disabled={!bulkUpdateStatus}
+                  className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Actualizar
+                </button>
+                <button
+                  onClick={() => setSelectedTaskIds(new Set())}
+                  className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary"
+                >
+                  Deseleccionar
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="grid gap-6">
           {[
             { key: "open", label: "Por Hacer", status: "open" },
             { key: "in_progress", label: "En Progreso", status: "in_progress" },
@@ -306,15 +366,35 @@ export default function ProjectDetailPage() {
                   {col.map((task) => (
                     <div
                       key={task.id}
-                      className="rounded border border-border-soft bg-bg-secondary p-3"
+                      className={`rounded border p-3 transition ${
+                        selectedTaskIds.has(task.id)
+                          ? "border-accent bg-accent/10"
+                          : "border-border-soft bg-bg-secondary"
+                      }`}
                     >
                       <div className="mb-2 flex items-start justify-between">
-                        <Link
-                          href={`/projects/${projectId}/tasks/${task.id}`}
-                          className="font-medium text-accent hover:underline"
-                        >
-                          {task.title}
-                        </Link>
+                        <div className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedTaskIds.has(task.id)}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedTaskIds);
+                              if (e.target.checked) {
+                                newSelected.add(task.id);
+                              } else {
+                                newSelected.delete(task.id);
+                              }
+                              setSelectedTaskIds(newSelected);
+                            }}
+                            className="mt-1 cursor-pointer"
+                          />
+                          <Link
+                            href={`/projects/${projectId}/tasks/${task.id}`}
+                            className="font-medium text-accent hover:underline"
+                          >
+                            {task.title}
+                          </Link>
+                        </div>
                         <div className="flex gap-2">
                           <span
                             className={`rounded px-2 py-1 text-xs font-semibold ${
@@ -380,7 +460,8 @@ export default function ProjectDetailPage() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {confirmDeleteTaskId && (
