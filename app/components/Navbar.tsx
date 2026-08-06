@@ -37,6 +37,17 @@ export function Navbar() {
             >
               Proyectos
             </Link>
+            <Link
+              href="/parties"
+              className={`text-sm transition ${
+                isActive("/parties") ||
+                pathname.startsWith("/parties/")
+                  ? "text-accent font-semibold"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Contactos
+            </Link>
           </div>
         </div>
       </div>
