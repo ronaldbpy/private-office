@@ -44,6 +44,8 @@ export default function ProjectDetailPage() {
     priority: "medium",
     dueDate: "",
   });
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProject();
@@ -113,6 +115,25 @@ export default function ProjectDetailPage() {
       fetchProject();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error actualizando tarea");
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!confirmDeleteTaskId) return;
+
+    setDeletingTaskId(confirmDeleteTaskId);
+    try {
+      const res = await fetch(`/api/v1/tasks/${confirmDeleteTaskId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      setConfirmDeleteTaskId(null);
+      fetchProject();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error eliminando tarea");
+    } finally {
+      setDeletingTaskId(null);
     }
   }
 
@@ -318,31 +339,40 @@ export default function ProjectDetailPage() {
                         )}
                       </div>
 
-                      <div className="flex gap-2">
-                        {task.status !== "completed" && (
-                          <button
-                            onClick={() => handleUpdateTask(task.id, "completed")}
-                            className="rounded bg-green-500/20 px-2 py-1 text-xs text-green-600 hover:bg-green-500/30"
-                          >
-                            Completar
-                          </button>
-                        )}
-                        {task.status !== "closed" && task.status === "completed" && (
-                          <button
-                            onClick={() => handleUpdateTask(task.id, "closed")}
-                            className="rounded bg-gray-500/20 px-2 py-1 text-xs text-gray-600 hover:bg-gray-500/30"
-                          >
-                            Cerrar
-                          </button>
-                        )}
-                        {task.status === "open" && (
-                          <button
-                            onClick={() => handleUpdateTask(task.id, "in_progress")}
-                            className="rounded bg-blue-500/20 px-2 py-1 text-xs text-blue-600 hover:bg-blue-500/30"
-                          >
-                            En Progreso
-                          </button>
-                        )}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex gap-2">
+                          {task.status !== "completed" && (
+                            <button
+                              onClick={() => handleUpdateTask(task.id, "completed")}
+                              className="rounded bg-green-500/20 px-2 py-1 text-xs text-green-600 hover:bg-green-500/30"
+                            >
+                              Completar
+                            </button>
+                          )}
+                          {task.status !== "closed" && task.status === "completed" && (
+                            <button
+                              onClick={() => handleUpdateTask(task.id, "closed")}
+                              className="rounded bg-gray-500/20 px-2 py-1 text-xs text-gray-600 hover:bg-gray-500/30"
+                            >
+                              Cerrar
+                            </button>
+                          )}
+                          {task.status === "open" && (
+                            <button
+                              onClick={() => handleUpdateTask(task.id, "in_progress")}
+                              className="rounded bg-blue-500/20 px-2 py-1 text-xs text-blue-600 hover:bg-blue-500/30"
+                            >
+                              En Progreso
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setConfirmDeleteTaskId(task.id)}
+                          disabled={deletingTaskId === task.id}
+                          className="text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
+                        >
+                          {deletingTaskId === task.id ? "Eliminando..." : "Eliminar"}
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -350,6 +380,33 @@ export default function ProjectDetailPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {confirmDeleteTaskId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded border border-border-soft bg-bg-secondary p-6">
+            <h3 className="mb-4 font-semibold text-text-primary">
+              ¿Eliminar esta tarea?
+            </h3>
+            <p className="mb-6 text-sm text-text-secondary">
+              Esta acción no puede ser revertida.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDeleteTaskId(null)}
+                className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
