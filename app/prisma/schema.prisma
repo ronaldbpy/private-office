@@ -48,6 +48,7 @@ model Entity {
   documentLinks    DocumentEntityLink[]
   ownedInterests   OwnershipInterest[] @relation("OwnerOf") // participaciones que ESTA entidad posee en otras
   interestsHeldBy  OwnershipInterest[] @relation("OwnedBy") // participaciones que otros poseen SOBRE esta entidad
+  accounts     Account[] @relation("EntityAccounts")
 
   @@map("entities")
 }
@@ -305,4 +306,70 @@ model DocumentAccessLog {
   occurredAt DateTime @default(now())
 
   @@map("document_access_log")
+}
+
+// ---------------------------------------------------------------------------
+// TREASURY (FS-006) — Cuentas bancarias, saldos, movimientos
+// ---------------------------------------------------------------------------
+
+model Account {
+  id            String    @id @default(uuid())
+  entityId      String
+  entity        Entity    @relation("EntityAccounts", fields: [entityId], references: [id])
+
+  // Datos del cuenta
+  accountNumber String? // número de cuenta (parcialmente mascarado para seguridad)
+  accountName   String? // ej: "Cuenta corriente principal"
+  accountType   String? // checking | savings | investment | cash | other
+  provider      String? // nombre del banco/entidad financiera
+  currency      String  @default("PYG") // ISO 4217
+
+  // Estado
+  status        String  @default("active") // active | closed | suspended
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  balances      AccountBalance[]
+  movements     AccountMovement[]
+
+  @@unique([entityId, accountNumber])
+  @@map("financial_accounts")
+}
+
+// Saldo actual de la cuenta — importado o calculado
+model AccountBalance {
+  id        String    @id @default(uuid())
+  accountId String
+  account   Account   @relation(fields: [accountId], references: [id])
+
+  // Balance importado de la fuente (banco, etc.)
+  amount    Decimal   @db.Decimal(18, 2)
+  asOfDate  DateTime  // fecha a la que corresponde este saldo
+
+  // Origen del dato
+  source    String    @default("manual") // manual | import | calculated
+  importedBy String?  // clerkUserId si fue importado manualmente
+
+  createdAt DateTime  @default(now())
+
+  @@map("financial_account_balances")
+}
+
+// Movimientos contables (transacciones)
+model AccountMovement {
+  id          String    @id @default(uuid())
+  accountId   String
+  account     Account   @relation(fields: [accountId], references: [id])
+
+  description String?
+  amount      Decimal   @db.Decimal(18, 2)
+  direction   String    // in | out
+
+  transactionDate DateTime // fecha en que ocurrió el movimiento
+  importedAt  DateTime @default(now())
+
+  classification String? // categoría o tipo de movimiento (ej: "transfer", "fee", "salary")
+
+  @@map("account_movements")
 }
