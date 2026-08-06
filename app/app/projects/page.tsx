@@ -226,12 +226,14 @@ export default function ProjectsPage() {
               onClick={exportToCSV}
               disabled={filteredProjects.length === 0}
               className="rounded border border-border-soft px-4 py-2 text-sm hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Export projects to CSV file"
             >
               📥 Exportar CSV
             </button>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="rounded bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
+              aria-label={showCreateForm ? "Cancel project creation" : "Create new project"}
             >
               {showCreateForm ? "Cancelar" : "+ Nuevo Proyecto"}
             </button>
