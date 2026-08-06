@@ -62,8 +62,8 @@ async function main() {
   console.log("✓ Created Ronald ownership of Axentia (100%)");
 
   // Crear acceso de usuario para Ronald a Axentia (Owner role con cascada)
-  // NOTA: clerkUserId es un placeholder — en producción se usaría el ID real de Clerk
-  const ronaldClerkId = "user_example_ronald";
+  // clerkUserId obtenido desde Clerk API
+  const ronaldClerkId = "user_3GvDXLehFYaF4fb0qQpnD73FUEM";
   await prisma.userAccess.create({
     data: {
       clerkUserId: ronaldClerkId,
