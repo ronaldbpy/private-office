@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#102a43">
   <link rel="manifest" href="tracker-manifest.json">
   <link rel="icon" href="icon-192.png">
-  <title>RB Tracker v5.2 - Elite Nutrition + Peptides</title>
+  <title>RB Tracker v5.4 - Nutrition + Peptides + Health Data Import</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #1a1a1a; color: #e0e0e0; }
@@ -77,13 +77,14 @@
   </div>
 
   <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importFromFile(event)">
+  <input type="file" id="healthFile" accept=".csv,.txt" style="display:none" onchange="importHealthFromFile(event)">
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('tracker-sw.js', { scope: '/tracker/' }).catch(e => console.log('SW registration failed:', e));
     }
 
-    const APP_VERSION = 5.2;
+    const APP_VERSION = 5.4;
     const V5_KEY = 'rb_tracker_v5';
     const LEGACY_KEYS = ['rb_tracker_v4', 'rb_tracker_v3', 'rb_tracker', 'rbTracker', 'rb_tracker_v2'];
 
@@ -162,6 +163,24 @@
       ]
     };
 
+    const MEDICATIONS_SUPPLEMENTS = [
+      { id: 'vitamin_d3', name: 'Vitamina D3', dosage: 4000, unit: 'UI' },
+      { id: 'vitamin_c', name: 'Vitamina C', dosage: 500, unit: 'mg' },
+      { id: 'zinc', name: 'Zinc', dosage: 30, unit: 'mg' },
+      { id: 'omega3', name: 'Omega-3', dosage: 2, unit: 'g' },
+      { id: 'bcomplex', name: 'B-Complex', dosage: 1, unit: 'cápsula' },
+      { id: 'magnesium', name: 'Magnesio', dosage: 400, unit: 'mg' },
+      { id: 'melatonin', name: 'Melatonina', dosage: 3, unit: 'mg' },
+      { id: 'ashwagandha', name: 'Ashwagandha', dosage: 500, unit: 'mg' },
+      { id: 'ltheanine', name: 'L-Teanina', dosage: 200, unit: 'mg' },
+      { id: 'collagen', name: 'Colágeno', dosage: 10, unit: 'g' },
+      { id: 'probiotics', name: 'Probióticos', dosage: 1, unit: 'cápsula' },
+      { id: 'curcumin', name: 'Curcumina', dosage: 500, unit: 'mg' },
+      { id: 'iron', name: 'Hierro', dosage: 18, unit: 'mg' },
+      { id: 'calcium', name: 'Calcio', dosage: 1000, unit: 'mg' },
+      { id: 'multivitamin', name: 'Multivitaminas', dosage: 1, unit: 'cápsula' }
+    ];
+
     let currentTab = 'dashboard';
     let isDarkMode = true;
     let data = null;
@@ -171,7 +190,7 @@
     function blankRecord(dateStr) {
       return {
         date: dateStr, meals: [], workouts: [],
-        supplements: { protein_powder_g: 0, creatine_mg: 0, preworkout_dose: '', vitamins: [], notes: '' },
+        supplements: { protein_powder_g: 0, creatine_mg: 0, preworkout_dose: '', vitamins: [], medications: {}, notes: '' },
         hydration: { liters: 0, notes: '' },
         sleep: { hours: 0, quality: null, notes: '' },
         recovery: { soreness: null, hrv: null, notes: '' },
@@ -197,7 +216,7 @@
           date,
           meals: rec.meals || [],
           workouts: rec.workouts || [],
-          supplements: rec.supplements || { protein_powder_g: 0, creatine_mg: 0, preworkout_dose: '', vitamins: [], notes: '' },
+          supplements: rec.supplements || { protein_powder_g: 0, creatine_mg: 0, preworkout_dose: '', vitamins: [], medications: {}, notes: '' },
           hydration: rec.hydration || { liters: 0, notes: '' },
           sleep: rec.sleep || { hours: 0, quality: null, notes: '' },
           recovery: rec.recovery || { soreness: null, hrv: null, notes: '' },
@@ -341,6 +360,7 @@
     function renderDashboard() {
       const macros = calcMacros();
       const targets = data.macroTargets;
+      const medCount = (todayRecord.supplements.medications && Object.keys(todayRecord.supplements.medications).length) || 0;
       let html = '<div style="max-width:600px;margin:0 auto;">';
       if (recoveryNote === 'no-data') {
         html += '<div class="banner warn">⚠️ Sin histórico. Ve a 📁 Datos para importar tu respaldo.</div>';
@@ -356,7 +376,8 @@
       html += '<div class="stat-box"><div class="stat-label">Sueño</div><div class="stat-value">' + (todayRecord.sleep.hours || 0) + ' h</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Peso</div><div class="stat-value">' + (todayRecord.weight ? todayRecord.weight + ' kg' : '-') + '</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Entrenamientos</div><div class="stat-value">' + (todayRecord.workouts ? todayRecord.workouts.length : 0) + '</div></div>';
-      html += '<div class="stat-box"><div class="stat-label">Suplementos hoy</div><div class="stat-value">' + (todayRecord.supplements.protein_powder_g ? '✓ Proteína' : '') + '</div></div>';
+      html += '<div class="stat-box"><div class="stat-label">Medicamentos/Suplementos</div><div class="stat-value">' + (medCount > 0 ? '✓ ' + medCount + ' tomados' : '-') + '</div></div>';
+      html += '<div class="stat-box"><div class="stat-label">Péptidos aplicados</div><div class="stat-value">' + (todayRecord.peptides.filter(p => p.status === 'done').length || 0) + '</div></div>';
       html += '<p class="muted" style="margin-top:20px;">Total: ' + totalRecords() + ' días en histórico.</p></div>';
       return html;
     }
@@ -478,15 +499,39 @@
     }
 
     function renderSupplements() {
-      let html = '<div style="max-width:600px;margin:0 auto;"><h2>Suplementos</h2>';
+      let html = '<div style="max-width:700px;margin:0 auto;"><h2>Medicamentos y Suplementos</h2>';
       const s = todayRecord.supplements;
-      html += '<div class="supp-box"><div class="supp-label">Proteína en polvo</div><div class="supp-input"><input type="number" id="suppProt" value="' + (s.protein_powder_g || 0) + '" placeholder="0"><div class="unit">g</div></div>';
-      html += '<div class="supp-box"><div class="supp-label">Creatina</div><div class="supp-input"><input type="number" id="suppCre" value="' + (s.creatine_mg || 0) + '" placeholder="0"><div class="unit">mg</div></div>';
+
+      html += '<h3 style="margin-top:16px;margin-bottom:8px;">Proteína y Pre-entreno</h3>';
+      html += '<div class="supp-box"><div class="supp-label">Proteína en polvo</div><div class="supp-input"><input type="number" id="suppProt" value="' + (s.protein_powder_g || 0) + '" placeholder="0"><div class="unit">g</div></div></div>';
+      html += '<div class="supp-box"><div class="supp-label">Creatina</div><div class="supp-input"><input type="number" id="suppCre" value="' + (s.creatine_mg || 0) + '" placeholder="0"><div class="unit">mg</div></div></div>';
       html += '<div class="supp-box"><div class="supp-label">Pre-entreno</div><div class="supp-input"><input type="text" id="suppPre" value="' + (s.preworkout_dose || '') + '" placeholder="ej: 1 scoop"></div></div>';
-      html += '<div class="supp-box"><div class="supp-label">Vitaminas (lista)</div><input type="text" id="suppVit" value="' + (s.vitamins.join(', ') || '') + '" placeholder="ej: Vitamina D, Zinc, Magnesio"></div>';
-      html += '<textarea id="suppNotes" placeholder="Otras notas sobre suplementos...">' + (s.notes || '') + '</textarea>';
-      html += '<button class="btn" onclick="updateSupplements()" style="width:100%;">💾 Guardar suplementos</button></div>';
+
+      html += '<h3 style="margin-top:16px;margin-bottom:8px;">Medicamentos y Suplementos Comunes</h3>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      MEDICATIONS_SUPPLEMENTS.forEach(med => {
+        const taken = s.medications && s.medications[med.id] ? 'checked' : '';
+        html += '<div class="supp-box" style="margin-bottom:0;"><label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;">';
+        html += '<input type="checkbox" id="med_' + med.id + '" ' + taken + ' onchange="updateMedication(\'' + med.id + '\', this.checked)">';
+        html += '<div style="flex:1;"><div class="supp-label" style="margin:0;">' + med.name + '</div><small style="color:#666;">' + med.dosage + ' ' + med.unit + '</small></div>';
+        html += '</label></div>';
+      });
+      html += '</div>';
+
+      html += '<h3 style="margin-top:16px;margin-bottom:8px;">Notas</h3>';
+      html += '<textarea id="suppNotes" placeholder="Otras notas sobre medicamentos y suplementos...">' + (s.notes || '') + '</textarea>';
+      html += '<button class="btn" onclick="updateSupplements()" style="width:100%;margin-top:12px;">💾 Guardar</button></div>';
       return html;
+    }
+
+    function updateMedication(id, checked) {
+      if (!todayRecord.supplements.medications) todayRecord.supplements.medications = {};
+      if (checked) {
+        todayRecord.supplements.medications[id] = { taken: true, timestamp: new Date().toISOString() };
+      } else {
+        delete todayRecord.supplements.medications[id];
+      }
+      saveData();
     }
 
     function updateSupplements() {
@@ -495,38 +540,169 @@
         creatine_mg: parseFloat(document.getElementById('suppCre').value) || 0,
         preworkout_dose: document.getElementById('suppPre').value || '',
         vitamins: (document.getElementById('suppVit').value.split(',').map(v => v.trim()).filter(v => v)) || [],
+        medications: todayRecord.supplements.medications || {},
         notes: document.getElementById('suppNotes').value || ''
       };
       saveData();
       render();
     }
 
+    function getManualMeasurements() {
+      try {
+        const stored = localStorage.getItem('ZEPP_MANUAL_MEASUREMENTS');
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveManualMeasurement(date, weight, fat, muscle, water, bone) {
+      const manual = getManualMeasurements();
+      const idx = manual.findIndex(m => m.date === date);
+      const entry = { date, weight: parseFloat(weight), fat: parseFloat(fat), muscle: parseFloat(muscle), water: parseFloat(water), bone: parseFloat(bone) };
+      if (idx >= 0) {
+        manual[idx] = entry;
+      } else {
+        manual.push(entry);
+      }
+      manual.sort((a, b) => a.date.localeCompare(b.date));
+      localStorage.setItem('ZEPP_MANUAL_MEASUREMENTS', JSON.stringify(manual));
+      saveData();
+      render();
+    }
+
+    function loadAllWeightData() {
+      const manual = getManualMeasurements();
+      const all = [...ZEPP_BODY_DATA, ...manual];
+      all.sort((a, b) => a.date.localeCompare(b.date));
+      const seen = {};
+      const unique = [];
+      all.forEach(d => {
+        if (!seen[d.date]) {
+          seen[d.date] = true;
+          unique.push(d);
+        }
+      });
+      return unique;
+    }
+
+    function drawWeightChart() {
+      const allData = loadAllWeightData();
+      if (allData.length === 0) return '<p style="color:#aaa;">Sin datos de peso</p>';
+
+      const w = 580, h = 300, pad = 40;
+      const weights = allData.map(d => d.weight);
+      const minW = Math.min(...weights, 85);
+      const maxW = Math.max(...weights);
+      const range = maxW - minW;
+      const goal = 85;
+
+      let svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg" style="border: 1px solid #333; border-radius: 4px; background: #0a0a0a; margin: 16px 0;">';
+
+      const xScale = (i) => pad + (i / (allData.length - 1)) * (w - 2 * pad);
+      const yScale = (weight) => h - pad - ((weight - minW) / range) * (h - 2 * pad);
+
+      svg += '<text x="' + (w / 2) + '" y="20" text-anchor="middle" style="font-size:13px;fill:#aaa;">Peso (kg)</text>';
+
+      svg += '<line x1="' + pad + '" y1="' + pad + '" x2="' + pad + '" y2="' + (h - pad) + '" stroke="#333" stroke-width="1"/>';
+      svg += '<line x1="' + pad + '" y1="' + (h - pad) + '" x2="' + (w - pad) + '" y2="' + (h - pad) + '" stroke="#333" stroke-width="1"/>';
+
+      const yGoal = yScale(goal);
+      svg += '<line x1="' + pad + '" y1="' + yGoal + '" x2="' + (w - pad) + '" y2="' + yGoal + '" stroke="#d9534f" stroke-width="2" stroke-dasharray="4,4" opacity="0.7"/>';
+      svg += '<text x="' + (pad - 5) + '" y="' + (yGoal + 4) + '" text-anchor="end" style="font-size:11px;fill:#d9534f;">85kg</text>';
+
+      let pathD = 'M';
+      allData.forEach((d, i) => {
+        const x = xScale(i);
+        const y = yScale(d.weight);
+        pathD += (i === 0 ? '' : ' L') + x + ' ' + y;
+      });
+      svg += '<path d="' + pathD + '" stroke="#175cd3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+
+      allData.forEach((d, i) => {
+        const x = xScale(i);
+        const y = yScale(d.weight);
+        const r = getManualMeasurements().some(m => m.date === d.date) ? 4 : 3;
+        const col = getManualMeasurements().some(m => m.date === d.date) ? '#ffd700' : '#175cd3';
+        svg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + col + '" opacity="0.8"/>';
+      });
+
+      svg += '</svg>';
+      return svg;
+    }
+
     function renderBodyComposition() {
       const goal = 85.0;
-      const curr = ZEPP_BODY_DATA[ZEPP_BODY_DATA.length-1];
-      const init = ZEPP_BODY_DATA[0];
-      let html = '<div style="max-width:600px;margin:0 auto;"><h2>📈 Composición Corporal (Zepp Life)</h2>';
-      html += '<div class="banner ok">✓ ' + ZEPP_BODY_DATA.length + ' mediciones desde ' + init.date + '</div>';
+      const allData = loadAllWeightData();
+      const curr = allData[allData.length - 1] || ZEPP_BODY_DATA[ZEPP_BODY_DATA.length - 1];
+      const init = allData[0] || ZEPP_BODY_DATA[0];
+
+      let html = '<div style="max-width:700px;margin:0 auto;"><h2>📈 Composición Corporal</h2>';
+      html += '<div class="banner ok">✓ ' + allData.length + ' mediciones desde ' + init.date + '</div>';
+
+      html += '<h3>Gráfica de Peso (kg)</h3>';
+      html += drawWeightChart();
+      html += '<p style="font-size:12px;color:#aaa;margin-top:8px;"><span style="color:#175cd3;">●</span> = Zepp  <span style="color:#ffd700;">●</span> = Manual</p>';
+
       html += '<div class="stat-box"><div class="stat-label">PROGRESO</div><div class="stat-value">' + (init.weight - curr.weight).toFixed(2) + ' kg 🔥</div>';
       html += '<small>Desde ' + init.date + ' a ' + curr.date + '</small></div>';
       html += '<div class="stat-box"><div class="stat-label">Peso actual</div><div class="stat-value">' + curr.weight.toFixed(2) + ' kg</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Meta</div><div class="stat-value">' + goal + ' kg</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Falta</div><div class="stat-value" style="color:#f39c12;">' + (curr.weight - goal).toFixed(2) + ' kg</div></div>';
+
       html += '<h3>Grasa Corporal</h3>';
       html += '<div class="stat-box"><div class="stat-label">Inicial</div><div class="stat-value">' + init.fat.toFixed(1) + '%</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Actual</div><div class="stat-value">' + curr.fat.toFixed(1) + '%</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Reducción</div><div class="stat-value" style="color:#2ecc71;">-' + (init.fat - curr.fat).toFixed(1) + '%</div></div>';
+
       html += '<h3>Masa Muscular</h3>';
       html += '<div class="stat-box"><div class="stat-label">Inicial</div><div class="stat-value">' + init.muscle.toFixed(2) + '%</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Actual</div><div class="stat-value">' + curr.muscle.toFixed(2) + '%</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Cambio</div><div class="stat-value" style="color:#f39c12;">' + (curr.muscle - init.muscle).toFixed(2) + '%</div></div>';
+
+      html += '<h3>Agregar Medición Manual</h3>';
+      html += '<div class="supp-box" style="background:#1a2a3a;border-color:#175cd3;">';
+      html += '<div class="form-row"><input type="date" id="manualDate" placeholder="Fecha"></div>';
+      html += '<div class="form-row"><input type="number" step="0.1" id="manualWeight" placeholder="Peso (kg)"><input type="number" step="0.1" id="manualFat" placeholder="Grasa (%)"></div>';
+      html += '<div class="form-row"><input type="number" step="0.1" id="manualMuscle" placeholder="Músculo (%)"><input type="number" step="0.1" id="manualWater" placeholder="Agua (%)"></div>';
+      html += '<div class="form-row"><input type="number" step="0.1" id="manualBone" placeholder="Hueso (g)"></div>';
+      html += '<button class="btn" onclick="addManualZeppEntry()" style="width:100%;background:#175cd3;">➕ Agregar medición</button>';
+      html += '</div>';
+
       html += '<h3>Últimos 15 registros</h3>';
-      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Peso</th><th>Grasa</th><th>Músculo</th></tr></thead><tbody>';
-      ZEPP_BODY_DATA.slice(-15).forEach(d => {
-        html += '<tr><td>' + d.date + '</td><td>' + d.weight.toFixed(1) + 'kg</td><td>' + d.fat.toFixed(1) + '%</td><td>' + d.muscle.toFixed(1) + '%</td></tr>';
+      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Peso</th><th>Grasa</th><th>Músculo</th><th>Agua</th><th>Hueso</th></tr></thead><tbody>';
+      allData.slice(-15).reverse().forEach(d => {
+        const isManual = getManualMeasurements().some(m => m.date === d.date);
+        const tag = isManual ? ' (manual)' : '';
+        html += '<tr style="' + (isManual ? 'background:#1a2a3a;' : '') + '"><td>' + d.date + tag + '</td><td>' + d.weight.toFixed(1) + 'kg</td><td>' + d.fat.toFixed(1) + '%</td><td>' + d.muscle.toFixed(1) + '%</td><td>' + (d.water ? d.water.toFixed(1) + '%' : '-') + '</td><td>' + (d.bone ? d.bone.toFixed(0) + 'g' : '-') + '</td></tr>';
       });
       html += '</tbody></table></div>';
       return html;
+    }
+
+    function addManualZeppEntry() {
+      const date = document.getElementById('manualDate').value;
+      const weight = document.getElementById('manualWeight').value;
+      const fat = document.getElementById('manualFat').value;
+      const muscle = document.getElementById('manualMuscle').value;
+      const water = document.getElementById('manualWater').value;
+      const bone = document.getElementById('manualBone').value;
+
+      if (!date || !weight || !fat || !muscle) {
+        alert('Por favor completa: Fecha, Peso, Grasa y Músculo');
+        return;
+      }
+
+      saveManualMeasurement(date, weight, fat, muscle, water || 0, bone || 0);
+
+      document.getElementById('manualDate').value = '';
+      document.getElementById('manualWeight').value = '';
+      document.getElementById('manualFat').value = '';
+      document.getElementById('manualMuscle').value = '';
+      document.getElementById('manualWater').value = '';
+      document.getElementById('manualBone').value = '';
+
+      msg('✓ Medición agregada a ' + date);
     }
 
     function renderPeptidesTab() {
@@ -565,13 +741,14 @@
       const dates = Object.keys(data.records).sort().reverse().slice(0, 60);
       if (dates.length === 0) return '<div class="banner warn">Sin histórico. Ve a 📁 Datos para importar tu respaldo.</div>';
       let html = '<h2 style="margin-bottom:16px;">Historial (últimos ' + dates.length + ' días)</h2>';
-      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Comidas</th><th>Entrenos</th><th>Peso</th><th>Agua (L)</th><th>Sueño (h)</th><th>Péptidos</th><th>Supps</th></tr></thead><tbody>';
+      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Comidas</th><th>Entrenos</th><th>Peso</th><th>Agua (L)</th><th>Sueño (h)</th><th>Péptidos</th><th>Medicinas</th></tr></thead><tbody>';
       dates.forEach(date => {
         const r = data.records[date];
         const d = new Date(date + 'T00:00:00');
         const ds = d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
-        const supp = (r.supplements.protein_powder_g > 0 ? 'P' : '') + (r.supplements.creatine_mg > 0 ? 'C' : '') + (r.supplements.preworkout_dose ? 'X' : '');
-        html += `<tr><td>${ds}</td><td>${r.meals.length}</td><td>${r.workouts.length}</td><td>${r.weight ? r.weight + ' kg' : '-'}</td><td>${r.hydration.liters || 0}</td><td>${r.sleep.hours || 0}</td><td>${r.peptides.filter(p => p.status === 'done').length}</td><td>${supp || '-'}</td></tr>`;
+        const medCount = (r.supplements && r.supplements.medications && Object.keys(r.supplements.medications).length) || 0;
+        const medDisplay = medCount > 0 ? medCount : '-';
+        html += `<tr><td>${ds}</td><td>${r.meals.length}</td><td>${r.workouts.length}</td><td>${r.weight ? r.weight + ' kg' : '-'}</td><td>${r.hydration.liters || 0}</td><td>${r.sleep.hours || 0}</td><td>${r.peptides.filter(p => p.status === 'done').length}</td><td>${medDisplay}</td></tr>`;
       });
       html += '</tbody></table>';
       return html;
@@ -584,6 +761,9 @@
       html += '<button class="btn" onclick="exportData()" style="width:100%;margin-bottom:8px;">⬇️ Exportar histórico (JSON)</button>';
       html += '<button class="btn" onclick="document.getElementById(\'importFile\').click()" style="width:100%;margin-bottom:8px;">⬆️ Importar desde archivo</button>';
       html += '<button class="btn" onclick="retryRecovery()" style="width:100%;">🔁 Reintentar recuperación local</button>';
+      html += '<h3 style="margin:16px 0 8px;">Apple Health (Phase 1)</h3>';
+      html += '<button class="btn" onclick="document.getElementById(\'healthFile\').click()" style="width:100%;margin-bottom:8px;background:#2ecc71;">📱 Importar CSV de Apple Health</button>';
+      html += '<p class="muted" style="font-size:11px;">Exporta tu historial de peso desde Apple Health como CSV e importa aquí.</p>';
       html += '<h3 style="margin:16px 0 8px;">Importar pegando JSON</h3>';
       html += '<textarea id="pasteBox" placeholder="Pega aquí el contenido de tu respaldo JSON..."></textarea>';
       html += '<button class="btn" onclick="importFromPaste()" style="width:100%;">Importar pegado</button>';
@@ -635,6 +815,41 @@
       saveData();
       msg('✓ Recuperados ' + n + ' días.');
       updateTodayRecord(); render();
+    }
+
+    function parseHealthCSV(text) {
+      const lines = text.split('\n').filter(l => l.trim());
+      const headers = lines[0].toLowerCase();
+      const records = [];
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',');
+        if (parts.length < 2) continue;
+        const dateStr = parts[0].trim();
+        const date = dateStr.match(/\d{4}-\d{2}-\d{2}/) ? dateStr.substring(0,10) : null;
+        if (!date) continue;
+        const weight = parseFloat(parts[1]);
+        if (!weight || weight < 40 || weight > 150) continue;
+        records.push({ date, weight: parseFloat(weight.toFixed(2)), fat: null, muscle: null, water: null, bone: null });
+      }
+      return records;
+    }
+    function importHealthFromFile(ev) {
+      const file = ev.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const records = parseHealthCSV(reader.result);
+        if (records.length === 0) { msg('❌ Archivo CSV inválido o vacío'); return; }
+        records.forEach(r => {
+          const manual = getManualMeasurements();
+          if (!manual.some(m => m.date === r.date)) {
+            saveManualMeasurement(r.date, r.weight, null, null, null, null);
+          }
+        });
+        msg('✓ Importados ' + records.length + ' registros de peso desde Apple Health');
+        updateTodayRecord(); render();
+        ev.target.value = '';
+      };
+      reader.readAsText(file);
     }
 
     function msg(t) { const el = document.getElementById('datosMsg'); if (el) el.textContent = t; }
