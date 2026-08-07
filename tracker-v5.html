@@ -168,17 +168,22 @@
         }
       }, []);
 
-      const todayRecord = data.records[selectedDate] || {
-        date: selectedDate,
-        meals: [],
-        workouts: [],
-        supplements: { taken: [], notes: '' },
-        hydration: { liters: 0, notes: '' },
-        sleep: { hours: 0, quality: null, notes: '' },
-        recovery: { soreness: null, hrv: null, notes: '' },
-        peptides: [],
-        checks: {}
-      };
+      const todayRecord = useMemo(() => {
+        if (!data.records[selectedDate]) {
+          data.records[selectedDate] = {
+            date: selectedDate,
+            meals: [],
+            workouts: [],
+            supplements: { taken: [], notes: '' },
+            hydration: { liters: 0, notes: '' },
+            sleep: { hours: 0, quality: null, notes: '' },
+            recovery: { soreness: null, hrv: null, notes: '' },
+            peptides: [],
+            checks: {}
+          };
+        }
+        return data.records[selectedDate];
+      }, [data, selectedDate]);
 
       const changeDate = (days) => {
         const d = new Date(selectedDate);
