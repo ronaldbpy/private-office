@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#102a43">
   <link rel="manifest" href="tracker-manifest.json">
   <link rel="icon" href="icon-192.png">
-  <title>RB Tracker v5.1 - Elite Nutrition + Peptides</title>
+  <title>RB Tracker v5.2 - Elite Nutrition + Peptides</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #1a1a1a; color: #e0e0e0; }
@@ -35,8 +35,8 @@
     .status-btn { padding: 6px 12px; background: #f39c12; color: black; border: none; cursor: pointer; border-radius: 3px; font-size: 12px; }
     .status-btn.done { background: #2ecc71; color: white; }
     .status-btn.skipped { background: #95a5a6; color: white; }
-    nav { display: flex; gap: 8px; padding: 8px; background: #102a43; border-top: 1px solid #333; flex-wrap: wrap; justify-content: center; }
-    nav button { padding: 10px; flex: 1; min-width: 60px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #333; cursor: pointer; border-radius: 4px; font-size: 12px; }
+    nav { display: flex; gap: 8px; padding: 8px; background: #102a43; border-top: 1px solid #333; flex-wrap: wrap; justify-content: center; overflow-x: auto; }
+    nav button { padding: 10px; flex-shrink: 0; background: #1a1a1a; color: #e0e0e0; border: 1px solid #333; cursor: pointer; border-radius: 4px; font-size: 12px; }
     nav button.active { background: #175cd3; color: white; }
     nav button:hover { background: #252525; }
     .btn { padding: 10px 16px; background: #175cd3; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 4px 4px 4px 0; }
@@ -44,15 +44,21 @@
     .banner { padding: 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
     .banner.warn { background: #4a3b12; border: 1px solid #7a5f1c; color: #ffd77a; }
     .banner.ok { background: #12331f; border: 1px solid #1f5c39; color: #9be3b6; }
-    input[type="text"], input[type="number"], textarea { background: #111; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 8px; font-size: 14px; }
+    input[type="text"], input[type="number"], textarea, select { background: #111; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 8px; font-size: 14px; }
+    select { cursor: pointer; }
     textarea { width: 100%; min-height: 80px; font-family: monospace; font-size: 12px; }
     .form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-    .form-row input, .form-row button { flex: 1; min-width: 100px; }
+    .form-row input, .form-row button, .form-row select { flex: 1; min-width: 100px; }
     .muted { font-size: 12px; color: #888; }
     .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .history-table th, .history-table td { border: 1px solid #333; padding: 8px; text-align: left; }
     .history-table th { background: #252525; font-weight: bold; }
     .history-table tr:hover { background: #252525; }
+    .supp-box { background: #1a1a1a; border: 1px solid #333; padding: 12px; margin-bottom: 8px; border-radius: 4px; }
+    .supp-label { font-weight: bold; margin-bottom: 6px; font-size: 13px; }
+    .supp-input { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .supp-input input { flex: 1; }
+    .supp-input .unit { font-size: 12px; color: #aaa; min-width: 40px; }
   </style>
 </head>
 <body>
@@ -73,20 +79,56 @@
   <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importFromFile(event)">
 
   <script>
-    // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('tracker-sw.js', { scope: '/tracker/' }).catch(e => console.log('SW registration failed:', e));
     }
 
-    const APP_VERSION = 5;
+    const APP_VERSION = 5.2;
     const V5_KEY = 'rb_tracker_v5';
     const LEGACY_KEYS = ['rb_tracker_v4', 'rb_tracker_v3', 'rb_tracker', 'rbTracker', 'rb_tracker_v2'];
 
-    let currentTab = 'dashboard';
-    let isDarkMode = true;
-    let data = null;
-    let todayRecord = null;
-    let recoveryNote = '';
+    const MEAL_PRESETS = [
+      { name: 'Huevo (1 grande)', calories: 80, protein: 6, carbs: 0.6, fat: 6 },
+      { name: 'Pechuga pollo (100g)', calories: 165, protein: 31, carbs: 0, fat: 3.6 },
+      { name: 'Salmón (100g)', calories: 208, protein: 25, carbs: 0, fat: 13 },
+      { name: 'Arroz blanco cocido (100g)', calories: 130, protein: 2.7, carbs: 28, fat: 0.3 },
+      { name: 'Patata cocida (100g)', calories: 77, protein: 2.1, carbs: 17, fat: 0.1 },
+      { name: 'Brócoli cocido (100g)', calories: 34, protein: 2.8, carbs: 7, fat: 0.4 },
+      { name: 'Espinaca cocida (100g)', calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4 },
+      { name: 'Manzana (1 mediana)', calories: 95, protein: 0.5, carbs: 25, fat: 0.3 },
+      { name: 'Plátano (1 mediano)', calories: 105, protein: 1.3, carbs: 27, fat: 0.3 },
+      { name: 'Yogur griego (150g)', calories: 130, protein: 24, carbs: 7, fat: 2 },
+      { name: 'Queso fresco (50g)', calories: 110, protein: 22, carbs: 1, fat: 2.5 },
+      { name: 'Pan integral (1 rebanada)', calories: 80, protein: 4, carbs: 14, fat: 1 },
+      { name: 'Lentejas cocidas (100g)', calories: 116, protein: 9, carbs: 20, fat: 0.4 },
+      { name: 'Atún en lata (100g)', calories: 132, protein: 29, carbs: 0, fat: 1.3 },
+      { name: 'Aceite oliva (1 cda)', calories: 120, protein: 0, carbs: 0, fat: 14 },
+      { name: 'Almendras (30g)', calories: 164, protein: 6, carbs: 6, fat: 14 },
+      { name: 'Cacahuetes (30g)', calories: 161, protein: 7, carbs: 5, fat: 14 },
+      { name: 'Avocado (1/2)', calories: 120, protein: 1.5, carbs: 6, fat: 11 },
+      { name: 'Leche entera (200ml)', calories: 140, protein: 6.8, carbs: 9.6, fat: 7.4 },
+      { name: 'Café con leche', calories: 40, protein: 2, carbs: 2, fat: 2 },
+      { name: 'Merluza (100g)', calories: 82, protein: 17, carbs: 0, fat: 0.9 },
+      { name: 'Ternera (100g)', calories: 250, protein: 26, carbs: 0, fat: 15 },
+      { name: 'Cerdo (100g)', calories: 242, protein: 27, carbs: 0, fat: 14 },
+      { name: 'Garbanzos cocidos (100g)', calories: 134, protein: 9, carbs: 23, fat: 2.4 },
+      { name: 'Tomate (1 mediano)', calories: 22, protein: 1.1, carbs: 5, fat: 0.2 },
+      { name: 'Lechuga (100g)', calories: 15, protein: 1.2, carbs: 3, fat: 0.1 },
+      { name: 'Zanahoria (100g)', calories: 41, protein: 0.9, carbs: 10, fat: 0.2 },
+      { name: 'Champiñón (100g)', calories: 22, protein: 3.1, carbs: 3.3, fat: 0.1 },
+      { name: 'Cebolla (100g)', calories: 40, protein: 1.1, carbs: 9, fat: 0.1 },
+      { name: 'Ajo (1 diente)', calories: 4, protein: 0.2, carbs: 1, fat: 0 },
+      { name: 'Nueces (30g)', calories: 196, protein: 4.3, carbs: 4, fat: 20 },
+      { name: 'Semillas calabaza (30g)', calories: 151, protein: 5, carbs: 5, fat: 13 },
+      { name: 'Miel (1 cda)', calories: 64, protein: 0.1, carbs: 17, fat: 0 },
+      { name: 'Chocolate negro 70% (30g)', calories: 155, protein: 2.2, carbs: 13, fat: 12 },
+      { name: 'Cerveza (330ml)', calories: 140, protein: 1.6, carbs: 11, fat: 0 },
+      { name: 'Vino tinto (150ml)', calories: 120, protein: 0.1, carbs: 3, fat: 0 },
+      { name: 'Tortilla española (100g)', calories: 140, protein: 11, carbs: 1, fat: 10 },
+      { name: 'Gazpacho (250ml)', calories: 40, protein: 1.5, carbs: 8, fat: 0.2 },
+      { name: 'Jamón serrano (50g)', calories: 165, protein: 30, carbs: 0, fat: 6 },
+      { name: 'Bacalao (100g)', calories: 82, protein: 17.7, carbs: 0, fat: 0.7 },
+    ];
 
     const PEPTIDE_DATA = {
       activos: [
@@ -116,10 +158,16 @@
       ]
     };
 
+    let currentTab = 'dashboard';
+    let isDarkMode = true;
+    let data = null;
+    let todayRecord = null;
+    let recoveryNote = '';
+
     function blankRecord(dateStr) {
       return {
         date: dateStr, meals: [], workouts: [],
-        supplements: { taken: [], notes: '' },
+        supplements: { protein_powder_g: 0, creatine_mg: 0, preworkout_dose: '', vitamins: [], notes: '' },
         hydration: { liters: 0, notes: '' },
         sleep: { hours: 0, quality: null, notes: '' },
         recovery: { soreness: null, hrv: null, notes: '' },
@@ -145,7 +193,7 @@
           date,
           meals: rec.meals || [],
           workouts: rec.workouts || [],
-          supplements: rec.supplements || { taken: [], notes: '' },
+          supplements: rec.supplements || { protein_powder_g: 0, creatine_mg: 0, preworkout_dose: '', vitamins: [], notes: '' },
           hydration: rec.hydration || { liters: 0, notes: '' },
           sleep: rec.sleep || { hours: 0, quality: null, notes: '' },
           recovery: rec.recovery || { soreness: null, hrv: null, notes: '' },
@@ -248,8 +296,8 @@
 
     function renderTabs() {
       const c = document.getElementById('tabs'); c.innerHTML = '';
-      const tabs = ['dashboard','meals','workouts','recovery','hydration','peptides','historial','datos'];
-      const emojis = { dashboard:'📋', meals:'🍽️', workouts:'💪', recovery:'😴', hydration:'💧', peptides:'💉', historial:'📊', datos:'📁' };
+      const tabs = ['dashboard','meals','workouts','recovery','hydration','supplements','peptides','historial','datos'];
+      const emojis = { dashboard:'📋', meals:'🍽️', workouts:'💪', recovery:'😴', hydration:'💧', supplements:'💊', peptides:'💉', historial:'📊', datos:'📁' };
       tabs.forEach(tab => {
         const b = document.createElement('button');
         b.textContent = emojis[tab]; b.title = tab;
@@ -266,6 +314,7 @@
       else if (currentTab === 'workouts') content.innerHTML = renderWorkouts();
       else if (currentTab === 'recovery') content.innerHTML = renderRecovery();
       else if (currentTab === 'hydration') content.innerHTML = renderHydration();
+      else if (currentTab === 'supplements') content.innerHTML = renderSupplements();
       else if (currentTab === 'peptides') content.innerHTML = renderPeptidesTab();
       else if (currentTab === 'historial') content.innerHTML = renderHistorial();
       else if (currentTab === 'datos') content.innerHTML = renderDatos();
@@ -302,7 +351,7 @@
       html += '<div class="stat-box"><div class="stat-label">Sueño</div><div class="stat-value">' + (todayRecord.sleep.hours || 0) + ' h</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Peso</div><div class="stat-value">' + (todayRecord.weight ? todayRecord.weight + ' kg' : '-') + '</div></div>';
       html += '<div class="stat-box"><div class="stat-label">Entrenamientos</div><div class="stat-value">' + (todayRecord.workouts ? todayRecord.workouts.length : 0) + '</div></div>';
-      html += '<div class="stat-box"><div class="stat-label">Péptidos aplicados</div><div class="stat-value">' + (todayRecord.peptides ? todayRecord.peptides.filter(p => p.status === 'done').length : 0) + '</div></div>';
+      html += '<div class="stat-box"><div class="stat-label">Suplementos hoy</div><div class="stat-value">' + (todayRecord.supplements.protein_powder_g ? '✓ Proteína' : '') + '</div></div>';
       html += '<p class="muted" style="margin-top:20px;">Total: ' + totalRecords() + ' días en histórico.</p></div>';
       return html;
     }
@@ -312,10 +361,27 @@
       (todayRecord.meals || []).forEach((m, i) => {
         html += '<div class="item"><div><b>' + (m.name || 'Comida ' + (i+1)) + '</b><br><small>' + (m.calories || 0) + ' cal | P:' + (m.protein || 0) + 'g C:' + (m.carbs || 0) + 'g F:' + (m.fat || 0) + 'g</small></div><button class="btn danger" onclick="removeMeal(' + i + ')">🗑️</button></div>';
       });
-      html += '<div class="form-row"><input type="text" id="mealName" placeholder="Nombre"><input type="number" id="mealCal" placeholder="Calorías"></div>';
-      html += '<div class="form-row"><input type="number" id="mealP" placeholder="Proteína (g)"><input type="number" id="mealC" placeholder="Carbos (g)"><input type="number" id="mealF" placeholder="Grasas (g)"></div>';
+      html += '<div class="form-row"><select id="mealPreset" onchange="autofillMeal()"><option value="">Selecciona comida presets...</option>';
+      MEAL_PRESETS.forEach(m => html += '<option value="' + m.name + '">' + m.name + '</option>');
+      html += '</select></div>';
+      html += '<div class="form-row"><input type="text" id="mealName" placeholder="O nombre personalizado"></div>';
+      html += '<div class="form-row"><input type="number" id="mealCal" placeholder="Calorías"><input type="number" id="mealP" placeholder="Proteína (g)"></div>';
+      html += '<div class="form-row"><input type="number" id="mealC" placeholder="Carbos (g)"><input type="number" id="mealF" placeholder="Grasas (g)"></div>';
       html += '<button class="btn" onclick="addMeal()" style="width:100%;">➕ Agregar comida</button></div>';
       return html;
+    }
+
+    function autofillMeal() {
+      const preset = document.getElementById('mealPreset').value;
+      if (!preset) return;
+      const meal = MEAL_PRESETS.find(m => m.name === preset);
+      if (meal) {
+        document.getElementById('mealName').value = meal.name;
+        document.getElementById('mealCal').value = meal.calories;
+        document.getElementById('mealP').value = meal.protein;
+        document.getElementById('mealC').value = meal.carbs;
+        document.getElementById('mealF').value = meal.fat;
+      }
     }
 
     function addMeal() {
@@ -331,6 +397,7 @@
       document.getElementById('mealP').value = '';
       document.getElementById('mealC').value = '';
       document.getElementById('mealF').value = '';
+      document.getElementById('mealPreset').value = '';
       render();
     }
 
@@ -405,6 +472,30 @@
       render();
     }
 
+    function renderSupplements() {
+      let html = '<div style="max-width:600px;margin:0 auto;"><h2>Suplementos</h2>';
+      const s = todayRecord.supplements;
+      html += '<div class="supp-box"><div class="supp-label">Proteína en polvo</div><div class="supp-input"><input type="number" id="suppProt" value="' + (s.protein_powder_g || 0) + '" placeholder="0"><div class="unit">g</div></div>';
+      html += '<div class="supp-box"><div class="supp-label">Creatina</div><div class="supp-input"><input type="number" id="suppCre" value="' + (s.creatine_mg || 0) + '" placeholder="0"><div class="unit">mg</div></div>';
+      html += '<div class="supp-box"><div class="supp-label">Pre-entreno</div><div class="supp-input"><input type="text" id="suppPre" value="' + (s.preworkout_dose || '') + '" placeholder="ej: 1 scoop"></div></div>';
+      html += '<div class="supp-box"><div class="supp-label">Vitaminas (lista)</div><input type="text" id="suppVit" value="' + (s.vitamins.join(', ') || '') + '" placeholder="ej: Vitamina D, Zinc, Magnesio"></div>';
+      html += '<textarea id="suppNotes" placeholder="Otras notas sobre suplementos...">' + (s.notes || '') + '</textarea>';
+      html += '<button class="btn" onclick="updateSupplements()" style="width:100%;">💾 Guardar suplementos</button></div>';
+      return html;
+    }
+
+    function updateSupplements() {
+      todayRecord.supplements = {
+        protein_powder_g: parseFloat(document.getElementById('suppProt').value) || 0,
+        creatine_mg: parseFloat(document.getElementById('suppCre').value) || 0,
+        preworkout_dose: document.getElementById('suppPre').value || '',
+        vitamins: (document.getElementById('suppVit').value.split(',').map(v => v.trim()).filter(v => v)) || [],
+        notes: document.getElementById('suppNotes').value || ''
+      };
+      saveData();
+      render();
+    }
+
     function renderPeptidesTab() {
       [...PEPTIDE_DATA.activos, ...PEPTIDE_DATA.opcionales].forEach(pep => {
         if (!todayRecord.peptides.find(p => p.id === pep.id)) {
@@ -441,12 +532,13 @@
       const dates = Object.keys(data.records).sort().reverse().slice(0, 60);
       if (dates.length === 0) return '<div class="banner warn">Sin histórico. Ve a 📁 Datos para importar tu respaldo.</div>';
       let html = '<h2 style="margin-bottom:16px;">Historial (últimos ' + dates.length + ' días)</h2>';
-      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Comidas</th><th>Entrenos</th><th>Peso</th><th>Agua (L)</th><th>Sueño (h)</th><th>Péptidos</th></tr></thead><tbody>';
+      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Comidas</th><th>Entrenos</th><th>Peso</th><th>Agua (L)</th><th>Sueño (h)</th><th>Péptidos</th><th>Supps</th></tr></thead><tbody>';
       dates.forEach(date => {
         const r = data.records[date];
         const d = new Date(date + 'T00:00:00');
         const ds = d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
-        html += `<tr><td>${ds}</td><td>${r.meals.length}</td><td>${r.workouts.length}</td><td>${r.weight ? r.weight + ' kg' : '-'}</td><td>${r.hydration.liters || 0}</td><td>${r.sleep.hours || 0}</td><td>${r.peptides.filter(p => p.status === 'done').length}</td></tr>`;
+        const supp = (r.supplements.protein_powder_g > 0 ? 'P' : '') + (r.supplements.creatine_mg > 0 ? 'C' : '') + (r.supplements.preworkout_dose ? 'X' : '');
+        html += `<tr><td>${ds}</td><td>${r.meals.length}</td><td>${r.workouts.length}</td><td>${r.weight ? r.weight + ' kg' : '-'}</td><td>${r.hydration.liters || 0}</td><td>${r.sleep.hours || 0}</td><td>${r.peptides.filter(p => p.status === 'done').length}</td><td>${supp || '-'}</td></tr>`;
       });
       html += '</tbody></table>';
       return html;
