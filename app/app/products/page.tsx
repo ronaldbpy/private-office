@@ -7,6 +7,7 @@ interface Product {
   id: string;
   code: string;
   name: string;
+  productType: string;
   unitPrice: number;
   quantity: number;
   status: string;
@@ -52,9 +53,11 @@ export default function ProductsPage() {
               <tr>
                 <th className="p-3 text-left">Código</th>
                 <th className="p-3 text-left">Nombre</th>
+                <th className="p-3 text-left">Tipo</th>
                 <th className="p-3 text-left">Precio</th>
                 <th className="p-3 text-left">Stock</th>
                 <th className="p-3 text-left">Estado</th>
+                <th className="p-3 text-left">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -62,9 +65,22 @@ export default function ProductsPage() {
                 <tr key={product.id} className="border-b border-border-soft hover:bg-surface-2">
                   <td className="p-3">{product.code}</td>
                   <td className="p-3">{product.name}</td>
+                  <td className="p-3">
+                    <span className="text-xs bg-surface-2 px-2 py-1 rounded">
+                      {product.productType === "SERVICE" ? "Servicio" : "Producto"}
+                    </span>
+                  </td>
                   <td className="p-3">{product.unitPrice.toLocaleString()}</td>
                   <td className="p-3">{product.quantity}</td>
                   <td className="p-3">{product.status}</td>
+                  <td className="p-3">
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="text-accent hover:underline"
+                    >
+                      Editar
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
