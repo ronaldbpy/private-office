@@ -13,7 +13,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const invoice = await prisma.invoice.findUnique({
       where: { id },
-      include: { items: { include: { product: true } }, customer: true, payments: true },
+      include: { items: { include: { product: true } }, customer: true, supplier: true, payments: true },
     });
 
     if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });

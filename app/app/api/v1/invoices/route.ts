@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     const invoices = await prisma.invoice.findMany({
       where: { entityId: { in: entityIds } },
-      include: { customer: true, items: { include: { product: true } }, payments: true },
+      include: { customer: true, supplier: true, items: { include: { product: true } }, payments: true },
       orderBy: { createdAt: "desc" },
     });
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { entityId, customerId, invoiceNumber, invoiceType, subtotal, taxAmount, total, issueDate, dueDate, items } = body;
+    const { entityId, customerId, supplierId, invoiceNumber, invoiceType, subtotal, taxAmount, total, issueDate, dueDate, items } = body;
 
     if (!entityId || !invoiceNumber || !invoiceType) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 422 });
@@ -46,7 +46,8 @@ export async function POST(req: Request) {
     const invoice = await prisma.invoice.create({
       data: {
         entityId,
-        customerId: customerId || null,
+        customerId: invoiceType === "SALE" ? customerId : null,
+        supplierId: invoiceType === "PURCHASE" ? supplierId : null,
         invoiceNumber,
         invoiceType,
         subtotal: typeof subtotal === "string" ? parseFloat(subtotal) : subtotal,
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
           })) || [],
         },
       },
-      include: { items: true, customer: true },
+      include: { items: true, customer: true, supplier: true },
     });
 
     return NextResponse.json({ invoice }, { status: 201 });
