@@ -106,7 +106,20 @@
           version: 5,
           records: {},
           macroTargets: { protein: 200, carbs: 300, fat: 80 },
-          peptideProtocol: {},
+          peptideProtocol: {
+            retatrutida: { label: "Retatrutida", frequency: "weekly", weekday: 2 },
+            bpc157_am: { label: "BPC-157 (mañana)", frequency: "daily" },
+            bpc157_pm: { label: "BPC-157 (noche)", frequency: "daily" },
+            cjc_ipa: { label: "CJC/Ipamorelin", frequency: "daily" },
+            ghk_cu: { label: "GHK-Cu", frequency: "weekdays_only" },
+            mots_c: { label: "MOTS-C", frequency: "3x_week", weekdays: [1,3,5] },
+            nad: { label: "NAD+", frequency: "3x_week", weekdays: [1,3,5] },
+            ta1: { label: "Thymosin Alpha-1", frequency: "2x_week", weekdays: [3,5] },
+            ss31: { label: "SS-31", frequency: "daily" },
+            klow: { label: "KLOW", frequency: "2x_week", weekdays: [3,5] },
+            pt141: { label: "PT-141", frequency: "on_demand" },
+            semax_selank: { label: "Semax+Selank", frequency: "2x_week", weekdays: [1,4] }
+          },
           syncedAt: Date.now()
         };
       }
