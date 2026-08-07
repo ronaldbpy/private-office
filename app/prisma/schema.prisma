@@ -52,6 +52,12 @@ model Entity {
   projects     Project[] @relation("EntityProjects")
   timelineEvents TimelineEvent[] @relation("EntityTimelineEvents")
   intelligenceReports IntelligenceReport[] @relation("EntityIntelligence")
+  customers    Customer[] @relation("EntityCustomers")
+  products     Product[] @relation("EntityProducts")
+  quotes       Quote[] @relation("EntityQuotes")
+  invoices     Invoice[] @relation("EntityInvoices")
+  events       Event[] @relation("EntityEvents")
+  accountingReports AccountingReport[] @relation("EntityAccountingReports")
 
   @@map("entities")
 }
@@ -485,4 +491,263 @@ model IntelligenceReport {
   @@map("intelligence_reports")
 }
 
+// ---------------------------------------------------------------------------
+// SALES & OPERATIONS — Clientes, Productos, Cotizaciones, Facturas
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id              String   @id @default(uuid())
+  entityId        String
+  entity          Entity   @relation("EntityCustomers", fields: [entityId], references: [id])
+
+  fullName        String
+  businessName    String?  // razón social si es empresa
+  taxId           String?  // RUC/cédula
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  country         String?
+
+  // Clasificación
+  customerType    String   @default("individual") // individual | business
+  status          String   @default("active") // active | inactive | archived
+
+  // Límite de crédito
+  creditLimit     Decimal? @db.Decimal(18, 2)
+  creditUsed      Decimal  @default(0) @db.Decimal(18, 2)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  invoices        Invoice[]
+  quotes          Quote[]
+
+  @@unique([entityId, taxId])
+  @@map("customers")
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  entityId        String
+  entity          Entity   @relation("EntityProducts", fields: [entityId], references: [id])
+
+  code            String   // código interno del producto
+  name            String
+  description     String?
+  category        String?
+
+  // Precios
+  unitPrice       Decimal  @db.Decimal(18, 2) // precio unitario
+  cost            Decimal? @db.Decimal(18, 2) // costo interno
+  currency        String   @default("PYG")
+
+  // Inventario
+  quantity        Int      @default(0)
+  unit            String   @default("unidad") // unidad, kg, litro, etc.
+
+  // Fiscal
+  taxRate         Decimal  @default(10) @db.Decimal(5, 2) // IVA %
+
+  status          String   @default("active") // active | discontinued | archived
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  quoteItems      QuoteItem[]
+  invoiceItems    InvoiceItem[]
+
+  @@unique([entityId, code])
+  @@map("products")
+}
+
+model Quote {
+  id              String   @id @default(uuid())
+  entityId        String
+  entity          Entity   @relation("EntityQuotes", fields: [entityId], references: [id])
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+
+  quoteNumber     String
+  description     String?
+  status          String   @default("draft") // draft | sent | accepted | rejected | expired
+
+  // Montos
+  subtotal        Decimal  @db.Decimal(18, 2)
+  taxAmount       Decimal  @db.Decimal(18, 2)
+  total           Decimal  @db.Decimal(18, 2)
+  currency        String   @default("PYG")
+
+  // Validez
+  issueDate       DateTime
+  expiryDate      DateTime
+  notes           String?
+
+  createdBy       String   // clerkUserId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items           QuoteItem[]
+
+  @@unique([entityId, quoteNumber])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id              String   @id @default(uuid())
+  quoteId         String
+  quote           Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+
+  quantity        Decimal  @db.Decimal(18, 4)
+  unitPrice       Decimal  @db.Decimal(18, 2)
+  taxRate         Decimal  @db.Decimal(5, 2)
+  total           Decimal  @db.Decimal(18, 2)
+
+  @@map("quote_items")
+}
+
+enum InvoiceType {
+  SALE      // factura de venta
+  PURCHASE  // factura de compra
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  entityId        String
+  entity          Entity        @relation("EntityInvoices", fields: [entityId], references: [id])
+  customerId      String?       // nullable para facturas de compra sin cliente
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+
+  invoiceNumber   String
+  invoiceType     InvoiceType
+  status          String        @default("draft") // draft | issued | paid | cancelled
+
+  // Montos
+  subtotal        Decimal       @db.Decimal(18, 2)
+  taxAmount       Decimal       @db.Decimal(18, 2)
+  total           Decimal       @db.Decimal(18, 2)
+  currency        String        @default("PYG")
+
+  // Dates
+  issueDate       DateTime
+  dueDate         DateTime?
+  paidDate        DateTime?
+
+  // Referencia
+  quoteId         String?       // si fue generada de una cotización
+  notes           String?
+
+  createdBy       String        // clerkUserId
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           InvoiceItem[]
+  payments        Payment[]
+
+  @@unique([entityId, invoiceNumber])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+
+  quantity        Decimal  @db.Decimal(18, 4)
+  unitPrice       Decimal  @db.Decimal(18, 2)
+  taxRate         Decimal  @db.Decimal(5, 2)
+  total           Decimal  @db.Decimal(18, 2)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount          Decimal  @db.Decimal(18, 2)
+  paymentDate     DateTime
+  paymentMethod   String   // cash | bank_transfer | check | card | other
+  reference       String?  // número de cheque, ref de transferencia, etc.
+
+  createdBy       String   // clerkUserId
+  createdAt       DateTime @default(now())
+
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — Calendarios y eventos (Casa Amelia, etc.)
+// ---------------------------------------------------------------------------
+
+model Event {
+  id              String   @id @default(uuid())
+  entityId        String
+  entity          Entity   @relation("EntityEvents", fields: [entityId], references: [id])
+
+  title           String
+  description     String?
+  eventType       String   // event | reminder | alert | task
+
+  startDate       DateTime
+  endDate         DateTime?
+  location        String?
+
+  attendees       String?  // JSON array de clerkUserIds o emails
+
+  status          String   @default("scheduled") // scheduled | completed | cancelled
+
+  createdBy       String   // clerkUserId
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([entityId])
+  @@index([startDate])
+  @@map("events")
+}
+
+// ---------------------------------------------------------------------------
+// ACCOUNTING REPORTS — Reportes contables para el contador
+// ---------------------------------------------------------------------------
+
+model AccountingReport {
+  id              String   @id @default(uuid())
+  entityId        String
+  entity          Entity   @relation("EntityAccountingReports", fields: [entityId], references: [id])
+
+  reportType      String   // balance_sheet | income_statement | cash_flow | trial_balance | journal
+  period          String   // YYYY-MM (ej: 2026-08)
+  status          String   @default("draft") // draft | submitted | accepted | archived
+
+  // Contenido del reporte
+  content         String   @db.Text // JSON con datos del reporte
+  htmlContent     String?  @db.Text // versión HTML para imprimir
+
+  // Auditoría
+  createdBy       String   // clerkUserId del usuario
+  submittedTo     String?  // email o identificador del contador
+  submittedAt     DateTime?
+  approvedBy      String?  // contador que aprobó
+  approvedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([entityId, reportType, period])
+  @@index([entityId])
+  @@index([period])
+  @@map("accounting_reports")
+}
+
+// ---------------------------------------------------------------------------
+// Link Entity a relaciones nuevas
+// ---------------------------------------------------------------------------
+
+// Agregar relaciones a Entity (ver cambios abajo)
 

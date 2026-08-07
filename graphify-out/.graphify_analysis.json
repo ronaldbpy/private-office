@@ -1,0 +1,473 @@
+{
+  "communities": {
+    "0": [
+      "app_app_api_v1_accounts_id_route",
+      "app_app_api_v1_accounts_id_route_get",
+      "app_app_api_v1_accounts_route",
+      "app_app_api_v1_accounts_route_get",
+      "app_app_api_v1_documents_id_route",
+      "app_app_api_v1_documents_id_route_delete",
+      "app_app_api_v1_documents_route",
+      "app_app_api_v1_documents_route_get",
+      "app_app_api_v1_entities_id_route",
+      "app_app_api_v1_entities_id_route_get",
+      "app_app_api_v1_entities_route",
+      "app_app_api_v1_entities_route_get",
+      "app_app_api_v1_holdings_route",
+      "app_app_api_v1_holdings_route_get",
+      "app_app_api_v1_intelligence_id_route",
+      "app_app_api_v1_intelligence_id_route_get",
+      "app_app_api_v1_intelligence_route",
+      "app_app_api_v1_intelligence_route_client",
+      "app_app_api_v1_intelligence_route_get",
+      "app_app_api_v1_intelligence_route_post",
+      "app_app_api_v1_obligations_route",
+      "app_app_api_v1_obligations_route_get",
+      "app_app_api_v1_parties_id_route",
+      "app_app_api_v1_parties_id_route_get",
+      "app_app_api_v1_parties_id_route_patch",
+      "app_app_api_v1_parties_route",
+      "app_app_api_v1_parties_route_get",
+      "app_app_api_v1_parties_route_post",
+      "app_app_api_v1_projects_id_route",
+      "app_app_api_v1_projects_id_route_delete",
+      "app_app_api_v1_projects_id_route_get",
+      "app_app_api_v1_projects_route",
+      "app_app_api_v1_projects_route_get",
+      "app_app_api_v1_projects_route_post",
+      "app_app_api_v1_tasks_id_comments_route",
+      "app_app_api_v1_tasks_id_comments_route_get",
+      "app_app_api_v1_tasks_id_comments_route_post",
+      "app_app_api_v1_tasks_id_route",
+      "app_app_api_v1_tasks_id_route_delete",
+      "app_app_api_v1_tasks_route",
+      "app_app_api_v1_tasks_route_get",
+      "app_app_api_v1_tasks_route_post",
+      "app_app_api_v1_timeline_route",
+      "app_app_api_v1_timeline_route_get",
+      "app_lib_access",
+      "app_lib_access_accessentry",
+      "app_lib_access_accessibleentityids",
+      "app_lib_access_getuseraccess",
+      "app_lib_access_role",
+      "app_lib_api_auth",
+      "app_lib_api_auth_getauthuserid",
+      "app_lib_prisma",
+      "app_lib_prisma_globalforprisma",
+      "docref_adr_0007"
+    ],
+    "1": [
+      "app_app_intelligence_id_page",
+      "app_app_intelligence_id_page_report",
+      "app_app_intelligence_id_page_reportdetailpage",
+      "app_app_intelligence_id_page_reporttypelabels",
+      "app_app_intelligence_page",
+      "app_app_intelligence_page_entity",
+      "app_app_intelligence_page_intelligencepage",
+      "app_app_intelligence_page_report",
+      "app_app_intelligence_page_reporttypelabels",
+      "app_app_page",
+      "app_app_page_badge",
+      "app_app_page_entitydot",
+      "app_app_page_home",
+      "app_app_page_sectioncard",
+      "app_app_projects_id_page",
+      "app_app_projects_id_page_project",
+      "app_app_projects_id_page_projectdetailpage",
+      "app_app_projects_id_page_task",
+      "app_components_timelinesection",
+      "app_components_timelinesection_eventicon",
+      "app_components_timelinesection_timelineitem",
+      "app_components_timelinesection_timelinesection",
+      "app_components_treasurysection",
+      "app_components_treasurysection_treasuryaccount",
+      "app_components_treasurysection_treasurysection",
+      "app_components_vaultsection",
+      "app_components_vaultsection_classificationlabels",
+      "app_components_vaultsection_vaultdocument",
+      "app_components_vaultsection_vaultentity",
+      "app_components_vaultsection_vaultsection",
+      "app_lib_duedates",
+      "app_lib_duedates_daysuntil",
+      "app_lib_duedates_formatdatepy",
+      "app_lib_duedates_nextduedate",
+      "app_lib_format",
+      "app_lib_format_formatcurrencypy",
+      "app_lib_format_formatnumberpy"
+    ],
+    "2": [
+      "anthropic_ai_sdk",
+      "app_package",
+      "app_package_dependencies",
+      "app_package_dependencies_anthropic_ai_sdk",
+      "app_package_dependencies_clerk_nextjs",
+      "app_package_dependencies_lightningcss",
+      "app_package_dependencies_next",
+      "app_package_dependencies_prisma",
+      "app_package_dependencies_prisma_client",
+      "app_package_dependencies_react",
+      "app_package_dependencies_react_dom",
+      "app_package_name",
+      "app_package_optionaldependencies",
+      "app_package_optionaldependencies_lightningcss_darwin_arm64",
+      "app_package_private",
+      "app_package_scripts",
+      "app_package_scripts_build",
+      "app_package_scripts_dev",
+      "app_package_scripts_lint",
+      "app_package_scripts_start",
+      "app_package_version",
+      "clerk_nextjs",
+      "lightningcss",
+      "lightningcss_darwin_arm64",
+      "next",
+      "prisma",
+      "prisma_client",
+      "react",
+      "react_dom"
+    ],
+    "3": [
+      "app_tsconfig",
+      "app_tsconfig_compileroptions",
+      "app_tsconfig_compileroptions_allowjs",
+      "app_tsconfig_compileroptions_esmoduleinterop",
+      "app_tsconfig_compileroptions_incremental",
+      "app_tsconfig_compileroptions_isolatedmodules",
+      "app_tsconfig_compileroptions_jsx",
+      "app_tsconfig_compileroptions_lib",
+      "app_tsconfig_compileroptions_module",
+      "app_tsconfig_compileroptions_moduleresolution",
+      "app_tsconfig_compileroptions_noemit",
+      "app_tsconfig_compileroptions_paths",
+      "app_tsconfig_compileroptions_plugins",
+      "app_tsconfig_compileroptions_resolvejsonmodule",
+      "app_tsconfig_compileroptions_skiplibcheck",
+      "app_tsconfig_compileroptions_strict",
+      "app_tsconfig_compileroptions_target",
+      "app_tsconfig_exclude",
+      "app_tsconfig_include",
+      "ref_dom",
+      "ref_dom_iterable",
+      "ref_esnext",
+      "ref_mts",
+      "ref_next_dev_types_ts",
+      "ref_next_env_d_ts",
+      "ref_next_types_ts",
+      "ref_node_modules",
+      "ref_ts",
+      "ref_tsx"
+    ],
+    "4": [
+      "app_package_devdependencies",
+      "app_package_devdependencies_eslint",
+      "app_package_devdependencies_eslint_config_next",
+      "app_package_devdependencies_tailwindcss",
+      "app_package_devdependencies_tailwindcss_postcss",
+      "app_package_devdependencies_tsx",
+      "app_package_devdependencies_types_node",
+      "app_package_devdependencies_types_react",
+      "app_package_devdependencies_types_react_dom",
+      "app_package_devdependencies_typescript",
+      "eslint",
+      "eslint_config_next",
+      "tailwindcss",
+      "tailwindcss_postcss",
+      "tsx",
+      "types_node",
+      "types_react",
+      "types_react_dom",
+      "typescript"
+    ],
+    "5": [
+      "app_app_layout",
+      "app_app_layout_fraunces",
+      "app_app_layout_geistmono",
+      "app_app_layout_geistsans",
+      "app_app_layout_metadata",
+      "app_app_layout_rootlayout",
+      "app_components_errorboundary",
+      "app_components_errorboundary_errorboundary",
+      "app_components_errorboundary_errorboundary_componentdidcatch",
+      "app_components_errorboundary_errorboundary_constructor",
+      "app_components_errorboundary_errorboundary_getderivedstatefromerror",
+      "app_components_errorboundary_errorboundary_render",
+      "app_components_errorboundary_props",
+      "app_components_errorboundary_state",
+      "app_components_navbar",
+      "app_components_navbar_navbar"
+    ],
+    "6": [
+      "app_app_projects_page",
+      "app_app_projects_page_project",
+      "app_app_projects_page_projectspage",
+      "app_components_skeleton",
+      "app_components_skeleton_skeletoncard",
+      "app_components_skeleton_skeletongrid",
+      "app_components_skeleton_skeletonline",
+      "app_components_toast",
+      "app_components_toast_toast",
+      "app_components_toast_toastprops",
+      "app_lib_useformvalidation",
+      "app_lib_useformvalidation_useformvalidation",
+      "app_lib_useformvalidation_validationerrors",
+      "app_lib_useformvalidation_validationrules"
+    ],
+    "7": [
+      "app_app_api_vault_documentid_route",
+      "app_app_api_vault_documentid_route_get",
+      "app_app_api_vault_upload_route",
+      "app_app_api_vault_upload_route_post",
+      "app_app_api_vault_upload_route_valid_classifications",
+      "app_lib_vault",
+      "app_lib_vault_ensurestoragedir",
+      "app_lib_vault_hashbuffer",
+      "app_lib_vault_readfile",
+      "app_lib_vault_safefilename",
+      "app_lib_vault_savefile",
+      "app_lib_vault_storage_root"
+    ],
+    "8": [
+      "app_app_holdings_page",
+      "app_app_holdings_page_holding",
+      "app_app_holdings_page_holdingspage",
+      "app_app_holdings_page_interesttypelabels",
+      "app_app_holdings_page_verificationlabels"
+    ],
+    "9": [
+      "app_app_entities_id_page",
+      "app_app_entities_id_page_entity",
+      "app_app_entities_id_page_entitydetailpage",
+      "app_app_entities_id_page_typelabels"
+    ],
+    "10": [
+      "app_app_entities_page",
+      "app_app_entities_page_entitiespage",
+      "app_app_entities_page_entity",
+      "app_app_entities_page_typelabels"
+    ],
+    "11": [
+      "app_app_parties_id_page",
+      "app_app_parties_id_page_party",
+      "app_app_parties_id_page_partydetailpage",
+      "app_app_parties_id_page_relationshiplabels"
+    ],
+    "12": [
+      "app_app_parties_page",
+      "app_app_parties_page_partiespage",
+      "app_app_parties_page_party",
+      "app_app_parties_page_relationshiplabels"
+    ],
+    "13": [
+      "app_app_api_openapi_json_route",
+      "app_app_api_openapi_json_route_get",
+      "app_app_api_openapi_json_route_openapi"
+    ],
+    "14": [
+      "app_app_documents_page",
+      "app_app_documents_page_document",
+      "app_app_documents_page_documentspage"
+    ],
+    "15": [
+      "app_app_loading",
+      "app_app_loading_loading",
+      "app_app_loading_skeletoncard"
+    ],
+    "16": [
+      "app_prisma_seed",
+      "app_prisma_seed_main",
+      "app_prisma_seed_prisma"
+    ],
+    "17": [
+      "app_proxy",
+      "app_proxy_config",
+      "app_proxy_ispublicroute"
+    ],
+    "18": [
+      "app_app_api_docs_route",
+      "app_app_api_docs_route_get"
+    ],
+    "19": [
+      "app_app_api_health_route",
+      "app_app_api_health_route_get"
+    ],
+    "20": [
+      "app_app_api_test_page",
+      "app_app_api_test_page_apitestpage"
+    ],
+    "21": [
+      "app_app_error",
+      "app_app_error_error"
+    ],
+    "22": [
+      "app_app_not_found",
+      "app_app_not_found_notfound"
+    ],
+    "23": [
+      "app_app_sign_in_sign_in_page",
+      "app_app_sign_in_sign_in_page_page"
+    ],
+    "24": [
+      "app_eslint_config",
+      "app_eslint_config_eslintconfig"
+    ],
+    "25": [
+      "app_lib_timeline",
+      "app_lib_timeline_createtimelineevent"
+    ],
+    "26": [
+      "app_next_config",
+      "app_next_config_nextconfig"
+    ],
+    "27": [
+      "app_postcss_config",
+      "app_postcss_config_config"
+    ],
+    "28": [
+      "app_prisma_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.1418588399720475,
+    "1": 0.08408408408408409,
+    "2": 0.06896551724137931,
+    "3": 0.06896551724137931,
+    "4": 0.10526315789473684,
+    "5": 0.15,
+    "6": 0.18681318681318682,
+    "7": 0.3181818181818182,
+    "8": 0.4,
+    "9": 0.5,
+    "10": 0.5,
+    "11": 0.5,
+    "12": 0.5,
+    "13": 0.6666666666666666,
+    "14": 0.6666666666666666,
+    "15": 0.6666666666666666,
+    "16": 0.6666666666666666,
+    "17": 0.6666666666666666,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0
+  },
+  "gods": [
+    {
+      "id": "app_lib_access_getuseraccess",
+      "label": "getUserAccess()",
+      "degree": 44
+    },
+    {
+      "id": "app_lib_access_accessibleentityids",
+      "label": "accessibleEntityIds()",
+      "degree": 44
+    },
+    {
+      "id": "app_lib_api_auth_getauthuserid",
+      "label": "getAuthUserId()",
+      "degree": 44
+    },
+    {
+      "id": "app_tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 16
+    },
+    {
+      "id": "app_lib_duedates_formatdatepy",
+      "label": "formatDatePY()",
+      "degree": 13
+    },
+    {
+      "id": "app_app_api_vault_upload_route_post",
+      "label": "POST()",
+      "degree": 7
+    },
+    {
+      "id": "app_tsconfig_include",
+      "label": "include",
+      "degree": 7
+    },
+    {
+      "id": "app_app_page_home",
+      "label": "Home()",
+      "degree": 6
+    },
+    {
+      "id": "app_components_errorboundary_errorboundary",
+      "label": "ErrorBoundary",
+      "degree": 6
+    },
+    {
+      "id": "app_package_scripts",
+      "label": "scripts",
+      "degree": 5
+    }
+  ],
+  "surprises": [
+    {
+      "source": "GET()",
+      "target": "getAuthUserId()",
+      "source_files": [
+        "app/app/api/v1/parties/[id]/route.ts",
+        "app/lib/api-auth.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `GET()` unexpectedly reaches hub `getAuthUserId()`"
+    },
+    {
+      "source": "PATCH()",
+      "target": "getAuthUserId()",
+      "source_files": [
+        "app/app/api/v1/parties/[id]/route.ts",
+        "app/lib/api-auth.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `PATCH()` unexpectedly reaches hub `getAuthUserId()`"
+    },
+    {
+      "source": "GET()",
+      "target": "getAuthUserId()",
+      "source_files": [
+        "app/app/api/v1/parties/route.ts",
+        "app/lib/api-auth.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `GET()` unexpectedly reaches hub `getAuthUserId()`"
+    },
+    {
+      "source": "POST()",
+      "target": "getAuthUserId()",
+      "source_files": [
+        "app/app/api/v1/parties/route.ts",
+        "app/lib/api-auth.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `POST()` unexpectedly reaches hub `getAuthUserId()`"
+    },
+    {
+      "source": "GET()",
+      "target": "accessibleEntityIds()",
+      "source_files": [
+        "app/app/api/vault/[documentId]/route.ts",
+        "app/lib/access.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}
