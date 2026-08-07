@@ -192,7 +192,7 @@
 
       // Validation 4: Retatrutida titration (WARNING if mismatch)
       if (retatrutida && retatrutida.status === 'done') {
-        const weekNum = Math.ceil(new Date(record.date).getDate() / 7);
+        const weekNum = Math.floor((new Date(record.date).getDate() - 1) / 7) + 1;
         const expectedDose = weekNum <= 2 ? 2.5 : weekNum === 3 ? 5 : 10;
         if (Math.abs(retatrutida.dosage_applied - expectedDose) > 2) {
           alerts.push({
@@ -650,9 +650,13 @@
                 padding: '10px',
                 marginBottom: '8px',
                 borderRadius: '4px',
-                backgroundColor: alert.type === 'critical' ? '#ffcccc' : '#fff3cd',
+                backgroundColor: alert.type === 'critical'
+                  ? (isDarkMode ? '#8b0000' : '#ffcccc')
+                  : (isDarkMode ? '#856404' : '#fff3cd'),
                 borderLeft: `4px solid ${alert.type === 'critical' ? '#cc0000' : '#ff9800'}`,
-                color: alert.type === 'critical' ? '#8b0000' : '#856404',
+                color: alert.type === 'critical'
+                  ? (isDarkMode ? '#ffcccc' : '#8b0000')
+                  : (isDarkMode ? '#fff3cd' : '#856404'),
                 fontSize: '13px',
                 fontWeight: '500'
               }}
@@ -688,6 +692,7 @@
                 onChange={handleDosageChange}
                 style={{
                   width: '60px',
+                  minWidth: '44px',
                   padding: '6px',
                   fontSize: '14px',
                   borderRadius: '4px',
@@ -751,7 +756,84 @@
     }
 
     function HistorialTab({ data }) {
-      return <div style={{ padding: '16px', textAlign: 'center' }}>Historial tab — Coming soon</div>;
+      const getPeptideHistory = () => {
+        const history = [];
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          const record = data.records[dateStr] || {};
+          const peptides = record.peptides || [];
+          peptides.forEach(p => {
+            history.push({
+              date: dateStr,
+              peptide: p.label,
+              dosage: p.dosage_applied ? `L${p.dosage_applied}` : '—',
+              status: p.status,
+              time: p.timestamp ? new Date(p.timestamp).toLocaleTimeString('es-ES') : '—'
+            });
+          });
+        }
+        return history;
+      };
+
+      const peptideHistory = getPeptideHistory();
+
+      const getStatusSymbol = (status) => {
+        if (status === 'done') return '✓';
+        if (status === 'skipped') return '⊘';
+        return '?';
+      };
+
+      const getStatusColor = (status) => {
+        if (status === 'done') return '#2ecc71';
+        if (status === 'skipped') return '#95a5a6';
+        return '#f39c12';
+      };
+
+      return (
+        <div style={{ padding: '16px' }}>
+          <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>Péptidos — Últimos 7 días</h3>
+
+          {peptideHistory.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+              No hay registros de péptidos en los últimos 7 días
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #ddd' }}>
+                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Fecha</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Péptido</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Dosis</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Estado</th>
+                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {peptideHistory.map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.date}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.peptide}</td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.dosage}</td>
+                      <td style={{
+                        border: '1px solid #ddd',
+                        padding: '8px',
+                        color: getStatusColor(row.status),
+                        fontWeight: 'bold'
+                      }}>
+                        {getStatusSymbol(row.status)} {row.status}
+                      </td>
+                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
     }
 
     function DatosTab({ data }) {
