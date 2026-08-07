@@ -55,16 +55,29 @@ export default function InvoicesPage() {
                 <th className="p-3 text-left">Total</th>
                 <th className="p-3 text-left">Estado</th>
                 <th className="p-3 text-left">Fecha</th>
+                <th className="p-3 text-left">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b border-border-soft hover:bg-surface-2">
                   <td className="p-3">{invoice.invoiceNumber}</td>
-                  <td className="p-3">{invoice.invoiceType}</td>
+                  <td className="p-3">
+                    <span className="text-xs bg-surface-2 px-2 py-1 rounded">
+                      {invoice.invoiceType === "PURCHASE" ? "Compra" : "Venta"}
+                    </span>
+                  </td>
                   <td className="p-3">{invoice.total.toLocaleString()}</td>
                   <td className="p-3">{invoice.status}</td>
                   <td className="p-3">{new Date(invoice.issueDate).toLocaleDateString()}</td>
+                  <td className="p-3">
+                    <Link
+                      href={`/invoices/${invoice.id}`}
+                      className="text-accent hover:underline"
+                    >
+                      Editar
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
