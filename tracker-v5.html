@@ -214,7 +214,7 @@
             {currentTab === 'workouts' && <WorkoutsTab todayRecord={todayRecord} saveData={saveData} data={data} />}
             {currentTab === 'recovery' && <RecoveryTab todayRecord={todayRecord} saveData={saveData} data={data} />}
             {currentTab === 'hydration' && <HydrationTab todayRecord={todayRecord} saveData={saveData} data={data} />}
-            {currentTab === 'peptides' && <PeptidesTab todayRecord={todayRecord} saveData={saveData} data={data} />}
+            {currentTab === 'peptides' && <PeptidesTab todayRecord={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} />}
             {currentTab === 'historial' && <HistorialTab data={data} />}
             {currentTab === 'datos' && <DatosTab data={data} />}
           </div>
@@ -269,7 +269,7 @@
       return <div style={{ padding: '16px', textAlign: 'center' }}>Hydration tab — Coming soon</div>;
     }
 
-    function PeptidesTab({ todayRecord, saveData, data }) {
+    function PeptidesTab({ todayRecord, saveData, data, isDarkMode }) {
       const [openSections, setOpenSections] = useState({
         diarios: true,
         threeWeek: true,
@@ -306,9 +306,11 @@
           onClick={() => toggleSection(section)}
           style={{
             cursor: 'pointer',
+            minHeight: '44px',
             padding: '12px',
-            background: '#f5f5f5',
-            border: '1px solid #ddd',
+            background: isDarkMode ? '#252525' : '#f5f5f5',
+            border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
+            color: isDarkMode ? '#e0e0e0' : '#333',
             borderRadius: '4px',
             marginBottom: '12px',
             fontWeight: 'bold',
@@ -330,10 +332,10 @@
           {openSections.diarios && (
             <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #175cd3' }}>
               {diarios.length === 0 ? (
-                <p style={{ color: '#999' }}>No diarios</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No diarios</p>
               ) : (
                 diarios.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} />
                 ))
               )}
             </div>
@@ -344,10 +346,10 @@
           {openSections.threeWeek && (
             <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #108a00' }}>
               {threeWeek.filter(shouldShowToday).length === 0 ? (
-                <p style={{ color: '#999' }}>No aplicable hoy</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
               ) : (
                 threeWeek.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} /> : null
                 ))
               )}
             </div>
@@ -358,10 +360,10 @@
           {openSections.segunDia && (
             <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #f59e0b' }}>
               {segunDia.filter(shouldShowToday).length === 0 ? (
-                <p style={{ color: '#999' }}>No aplicable hoy</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
               ) : (
                 segunDia.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} /> : null
                 ))
               )}
             </div>
@@ -372,10 +374,10 @@
           {openSections.opcionales && (
             <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #999' }}>
               {opcionales.length === 0 ? (
-                <p style={{ color: '#999' }}>No opcionales</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No opcionales</p>
               ) : (
                 opcionales.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} />
                 ))
               )}
             </div>
@@ -384,20 +386,25 @@
       );
     }
 
-    function PeptideItem({ peptide, record, saveData }) {
+    function PeptideItem({ peptide, record, saveData, isDarkMode }) {
       return (
         <div style={{
+          minHeight: '44px',
           padding: '12px',
           marginBottom: '8px',
-          background: '#f9f9f9',
-          border: '1px solid #e5e5e5',
+          background: isDarkMode ? '#1a1a1a' : '#f9f9f9',
+          border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
+          color: isDarkMode ? '#e0e0e0' : '#333',
           borderRadius: '4px',
-          fontSize: '14px'
+          fontSize: '14px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
         }}>
           <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{peptide.label}</div>
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{peptide.mechanism}</div>
+          <div style={{ fontSize: '12px', color: isDarkMode ? '#aaa' : '#666', marginBottom: '4px' }}>{peptide.mechanism}</div>
           {peptide.dosage_protocol && (
-            <div style={{ fontSize: '12px', color: '#999' }}>Dosis: {peptide.dosage_protocol}µg</div>
+            <div style={{ fontSize: '12px', color: isDarkMode ? '#888' : '#999' }}>Dosis: {peptide.dosage_protocol}µg</div>
           )}
         </div>
       );
