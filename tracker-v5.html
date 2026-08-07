@@ -335,7 +335,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No diarios</p>
               ) : (
                 diarios.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} />
                 ))
               )}
             </div>
@@ -349,7 +349,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
               ) : (
                 threeWeek.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} /> : null
                 ))
               )}
             </div>
@@ -363,7 +363,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
               ) : (
                 segunDia.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} /> : null
                 ))
               )}
             </div>
@@ -377,7 +377,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No opcionales</p>
               ) : (
                 opcionales.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} isDarkMode={isDarkMode} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} />
                 ))
               )}
             </div>
@@ -386,26 +386,114 @@
       );
     }
 
-    function PeptideItem({ peptide, record, saveData, isDarkMode }) {
+    function PeptideItem({ peptide, record, saveData, data, isDarkMode }) {
+      // Initialize state for this peptide entry
+      const [entry, setEntry] = useState(() => {
+        if (!record.peptides) record.peptides = [];
+        const existing = record.peptides.find(p => p.id === peptide.id);
+        if (existing) return existing;
+
+        const newEntry = {
+          id: peptide.id,
+          label: peptide.label,
+          mechanism: peptide.mechanism,
+          dosage_protocol: peptide.dosage_protocol,
+          dosage_applied: peptide.dosage_protocol || 50,
+          status: 'pending',
+          timestamp: null,
+          notes: ''
+        };
+        record.peptides.push(newEntry);
+        return newEntry;
+      });
+
+      const handleStatusClick = () => {
+        const states = ['pending', 'done', 'skipped'];
+        const current = entry.status || 'pending';
+        const nextIdx = (states.indexOf(current) + 1) % 3;
+        const updatedEntry = { ...entry, status: states[nextIdx], timestamp: states[nextIdx] === 'done' ? new Date().toISOString() : null };
+        setEntry(updatedEntry);
+
+        // Update in record and save
+        const idx = record.peptides.findIndex(p => p.id === peptide.id);
+        if (idx !== -1) record.peptides[idx] = updatedEntry;
+        saveData(data);
+      };
+
+      const handleDosageChange = (e) => {
+        const value = e.target.value;
+        const dosage = value ? parseInt(value) : (peptide.dosage_protocol || 50);
+        const updatedEntry = { ...entry, dosage_applied: dosage };
+        setEntry(updatedEntry);
+
+        // Update in record and save
+        const idx = record.peptides.findIndex(p => p.id === peptide.id);
+        if (idx !== -1) record.peptides[idx] = updatedEntry;
+        saveData(data);
+      };
+
+      const statusSymbol = entry.status === 'done' ? '☑' : entry.status === 'skipped' ? '⊘' : '☐';
+      const statusColor = entry.status === 'done' ? '#2ecc71' : entry.status === 'skipped' ? '#95a5a6' : '#f39c12';
+      const statusLabel = entry.status.charAt(0).toUpperCase() + entry.status.slice(1);
+
       return (
         <div style={{
-          minHeight: '44px',
-          padding: '12px',
-          marginBottom: '8px',
-          background: isDarkMode ? '#1a1a1a' : '#f9f9f9',
           border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
-          color: isDarkMode ? '#e0e0e0' : '#333',
+          padding: '10px',
+          marginBottom: '10px',
           borderRadius: '4px',
-          fontSize: '14px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center'
+          backgroundColor: isDarkMode ? '#1a1a1a' : '#f9f9f9'
         }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{peptide.label}</div>
-          <div style={{ fontSize: '12px', color: isDarkMode ? '#aaa' : '#666', marginBottom: '4px' }}>{peptide.mechanism}</div>
-          {peptide.dosage_protocol && (
-            <div style={{ fontSize: '12px', color: isDarkMode ? '#888' : '#999' }}>Dosis: {peptide.dosage_protocol}µg</div>
-          )}
+          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: isDarkMode ? '#e0e0e0' : '#333' }}>{entry.label}</div>
+          <div style={{ fontSize: '12px', color: isDarkMode ? '#999' : '#666', marginBottom: '8px' }}>
+            🧬 {entry.mechanism}
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            marginTop: '8px',
+            minHeight: '44px',
+            flexWrap: 'wrap'
+          }}>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={entry.dosage_applied}
+              onChange={handleDosageChange}
+              style={{
+                width: '60px',
+                padding: '6px',
+                fontSize: '14px',
+                borderRadius: '4px',
+                border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`,
+                backgroundColor: isDarkMode ? '#2a2a2a' : '#fff',
+                color: isDarkMode ? '#e0e0e0' : '#333'
+              }}
+              placeholder="L"
+            />
+            <span style={{ color: isDarkMode ? '#aaa' : '#666' }}>L</span>
+            <button
+              onClick={handleStatusClick}
+              style={{
+                padding: '6px 12px',
+                cursor: 'pointer',
+                backgroundColor: statusColor,
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '14px',
+                minWidth: '44px',
+                minHeight: '44px',
+                fontWeight: 'bold',
+                transition: 'background-color 0.2s'
+              }}
+              title={`Status: ${statusLabel}`}
+            >
+              {statusSymbol} {statusLabel}
+            </button>
+          </div>
         </div>
       );
     }
