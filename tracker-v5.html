@@ -270,7 +270,137 @@
     }
 
     function PeptidesTab({ todayRecord, saveData, data }) {
-      return <div style={{ padding: '16px', textAlign: 'center' }}>Peptides tab — coming soon</div>;
+      const [openSections, setOpenSections] = useState({
+        diarios: true,
+        threeWeek: true,
+        segunDia: true,
+        opcionales: false
+      });
+
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+      // Helper: should peptide show today based on frequency?
+      const shouldShowToday = (peptide) => {
+        if (peptide.frequency === 'daily') return true;
+        if (peptide.frequency === 'weekdays_only') return dayOfWeek >= 1 && dayOfWeek <= 5;
+        if (peptide.frequency === '3x_week' && peptide.weekdays) return peptide.weekdays.includes(dayOfWeek);
+        if (peptide.frequency === '2x_week' && peptide.weekdays) return peptide.weekdays.includes(dayOfWeek);
+        if (peptide.frequency === 'weekly' && peptide.weekday) return dayOfWeek === peptide.weekday;
+        if (peptide.frequency === 'on_demand') return true;
+        return false;
+      };
+
+      // Categorize activos into sections
+      const diarios = PEPTIDE_DATA.activos.filter(p => p.id.startsWith('bpc157') || p.id === 'cjc_ipa');
+      const threeWeek = PEPTIDE_DATA.activos.filter(p => ['mots_c', 'nad', 'ta1', 'ghk_cu'].includes(p.id));
+      const segunDia = PEPTIDE_DATA.activos.filter(p => ['retatrutida', 'klow', 'pt141', 'semax_selank', 'ss31'].includes(p.id));
+      const opcionales = PEPTIDE_DATA.opcionales;
+
+      const toggleSection = (section) => {
+        setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+      };
+
+      const SectionHeader = ({ title, section }) => (
+        <div
+          onClick={() => toggleSection(section)}
+          style={{
+            cursor: 'pointer',
+            padding: '12px',
+            background: '#f5f5f5',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            marginBottom: '12px',
+            fontWeight: 'bold',
+            userSelect: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          <span>{title}</span>
+          <span>{openSections[section] ? '▼' : '▶'}</span>
+        </div>
+      );
+
+      return (
+        <div style={{ padding: '10px', maxWidth: '600px' }}>
+          {/* Diarios */}
+          <SectionHeader title="Diarios (cada día)" section="diarios" />
+          {openSections.diarios && (
+            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #175cd3' }}>
+              {diarios.length === 0 ? (
+                <p style={{ color: '#999' }}>No diarios</p>
+              ) : (
+                diarios.map(pep => (
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} />
+                ))
+              )}
+            </div>
+          )}
+
+          {/* 3x/Semana */}
+          <SectionHeader title="3x/Semana" section="threeWeek" />
+          {openSections.threeWeek && (
+            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #108a00' }}>
+              {threeWeek.filter(shouldShowToday).length === 0 ? (
+                <p style={{ color: '#999' }}>No aplicable hoy</p>
+              ) : (
+                threeWeek.map(pep => (
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} /> : null
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Según Día */}
+          <SectionHeader title="Según Día" section="segunDia" />
+          {openSections.segunDia && (
+            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #f59e0b' }}>
+              {segunDia.filter(shouldShowToday).length === 0 ? (
+                <p style={{ color: '#999' }}>No aplicable hoy</p>
+              ) : (
+                segunDia.map(pep => (
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} /> : null
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Opcionales */}
+          <SectionHeader title="Opcionales — Evidencia Débil" section="opcionales" />
+          {openSections.opcionales && (
+            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #999' }}>
+              {opcionales.length === 0 ? (
+                <p style={{ color: '#999' }}>No opcionales</p>
+              ) : (
+                opcionales.map(pep => (
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} />
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function PeptideItem({ peptide, record, saveData }) {
+      return (
+        <div style={{
+          padding: '12px',
+          marginBottom: '8px',
+          background: '#f9f9f9',
+          border: '1px solid #e5e5e5',
+          borderRadius: '4px',
+          fontSize: '14px'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{peptide.label}</div>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{peptide.mechanism}</div>
+          {peptide.dosage_protocol && (
+            <div style={{ fontSize: '12px', color: '#999' }}>Dosis: {peptide.dosage_protocol}µg</div>
+          )}
+        </div>
+      );
     }
 
     function HistorialTab({ data }) {
