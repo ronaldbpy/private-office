@@ -1,53 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RB Tracker v5 - Peptides Module</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102a43">
+  <title>RB Tracker v5 - Elite Nutrition + Peptides</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
+      margin: 0;
+      -webkit-text-size-adjust: 100%;
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    h1 { color: #333; margin-bottom: 20px; }
-    .status {
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 4px;
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-    .error {
-      background: #ffebee;
-      color: #c62828;
-    }
-    pre {
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 4px;
-      overflow-x: auto;
-      font-size: 12px;
-    }
+    #root { min-height: 100vh; min-height: 100dvh; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>RB Tracker v5 - localStorage Migration</h1>
-    <div id="status" class="status">Initializing...</div>
-    <div id="output"></div>
-  </div>
+  <div id="root"></div>
 
-  <script>
+  <script type="text/babel">
     // ============================================================================
     // CORE MIGRATION FUNCTION
     // ============================================================================
@@ -157,73 +132,159 @@
     };
 
     // ============================================================================
-    // INITIALIZATION AND TESTING
+    // REACT HOOKS & UTILITIES
     // ============================================================================
-    function initializeTracker() {
-      try {
-        const v5Data = migrateLocalStorage();
+    const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-        // Validate schema
-        const hasVersion = v5Data.version === 5;
-        const hasPeptideProtocol = v5Data.peptideProtocol && typeof v5Data.peptideProtocol === 'object';
-        const hasRecords = v5Data.records && typeof v5Data.records === 'object';
-        const protocolKeys = Object.keys(v5Data.peptideProtocol || {});
-        const peptideDataCount = PEPTIDE_DATA.activos.length + PEPTIDE_DATA.opcionales.length;
-
-        const statusEl = document.getElementById('status');
-        const outputEl = document.getElementById('output');
-
-        if (hasVersion && hasPeptideProtocol && hasRecords) {
-          statusEl.className = 'status';
-          statusEl.textContent = '✓ Migration successful';
-
-          outputEl.innerHTML = `
-            <h2>Schema Validation Results</h2>
-            <p><strong>Version:</strong> ${v5Data.version}</p>
-            <p><strong>Macro Targets:</strong> ${JSON.stringify(v5Data.macroTargets)}</p>
-            <p><strong>Peptide Protocol Keys:</strong> ${protocolKeys.length} entries</p>
-            <p><strong>Available Peptides (activos):</strong> ${PEPTIDE_DATA.activos.length}</p>
-            <p><strong>Available Peptides (opcionales):</strong> ${PEPTIDE_DATA.opcionales.length}</p>
-            <p><strong>Total Peptides:</strong> ${peptideDataCount}</p>
-            <p><strong>Records Count:</strong> ${Object.keys(v5Data.records).length}</p>
-            <p><strong>Last Synced:</strong> ${new Date(v5Data.syncedAt).toISOString()}</p>
-
-            <h3>localStorage Keys</h3>
-            <pre>${JSON.stringify({
-              'rb_tracker_v5': { version: v5Data.version, recordCount: Object.keys(v5Data.records).length }
-            }, null, 2)}</pre>
-
-            <h3>Peptide Protocol Structure (sample)</h3>
-            <pre>${JSON.stringify(v5Data.peptideProtocol.retatrutida, null, 2)}</pre>
-
-            <h3>PEPTIDE_DATA Constants Loaded</h3>
-            <p>Activos: ${PEPTIDE_DATA.activos.map(p => p.label).join(', ')}</p>
-            <p>Opcionales: ${PEPTIDE_DATA.opcionales.map(p => p.label).join(', ')}</p>
-          `;
-        } else {
-          statusEl.className = 'status error';
-          statusEl.textContent = '✗ Migration incomplete';
-
-          outputEl.innerHTML = `
-            <h2>Error Details</h2>
-            <ul>
-              <li>Version check: ${hasVersion ? '✓' : '✗'}</li>
-              <li>peptideProtocol: ${hasPeptideProtocol ? '✓' : '✗'}</li>
-              <li>records: ${hasRecords ? '✓' : '✗'}</li>
-            </ul>
-            <pre>${JSON.stringify(v5Data, null, 2)}</pre>
-          `;
-        }
-      } catch (error) {
-        const statusEl = document.getElementById('status');
-        statusEl.className = 'status error';
-        statusEl.textContent = '✗ Error during initialization';
-        document.getElementById('output').innerHTML = `<pre>${error.message}\n${error.stack}</pre>`;
-      }
+    function getTodayKey() {
+      const d = new Date();
+      return d.toISOString().split('T')[0];
     }
 
-    // Run initialization when page loads
-    window.addEventListener('load', initializeTracker);
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      return `${days[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]}`;
+    }
+
+    // ============================================================================
+    // APP COMPONENT WITH TAB NAVIGATION (INCLUDING PEPTIDES)
+    // ============================================================================
+    function App() {
+      const [data, setData] = useState(() => migrateLocalStorage());
+      const [currentTab, setCurrentTab] = useState('dashboard');
+      const [selectedDate, setSelectedDate] = useState(getTodayKey());
+      const [isDarkMode, setIsDarkMode] = useState(
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+      );
+
+      const saveData = useCallback((newData) => {
+        setData(newData);
+        try {
+          localStorage.setItem('rb_tracker_v5', JSON.stringify(newData));
+        } catch (e) {
+          console.error('Save failed:', e);
+        }
+      }, []);
+
+      const todayRecord = data.records[selectedDate] || {
+        date: selectedDate,
+        meals: [],
+        workouts: [],
+        supplements: { taken: [], notes: '' },
+        hydration: { liters: 0, notes: '' },
+        sleep: { hours: 0, quality: null, notes: '' },
+        recovery: { soreness: null, hrv: null, notes: '' },
+        peptides: [],
+        checks: {}
+      };
+
+      const changeDate = (days) => {
+        const d = new Date(selectedDate);
+        d.setDate(d.getDate() + days);
+        setSelectedDate(d.toISOString().split('T')[0]);
+      };
+
+      return (
+        <div style={{ minHeight: '100vh', background: isDarkMode ? '#111' : '#fff', color: isDarkMode ? '#fff' : '#000' }}>
+          {/* Header */}
+          <header style={{ background: '#102a43', color: '#fff', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ textAlign: 'center', flex: 1 }}>
+              <h1 style={{ fontSize: '18px', marginBottom: '8px' }}>{formatDate(selectedDate)}</h1>
+              <div style={{ marginTop: '8px' }}>
+                <button onClick={() => changeDate(-1)} style={{ background: '#1e5ba8', color: '#fff', border: 'none', padding: '6px 12px', marginRight: '8px', cursor: 'pointer', borderRadius: '4px' }}>← Anterior</button>
+                <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ padding: '6px', margin: '0 8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                <button onClick={() => changeDate(1)} style={{ background: '#1e5ba8', color: '#fff', border: 'none', padding: '6px 12px', marginLeft: '8px', cursor: 'pointer', borderRadius: '4px' }}>Siguiente →</button>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '20px' }}
+              title="Toggle dark mode"
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+          </header>
+
+          {/* Tab Content */}
+          <div style={{ padding: '16px', paddingBottom: '80px' }}>
+            {currentTab === 'dashboard' && <DashboardTab todayRecord={todayRecord} data={data} />}
+            {currentTab === 'meals' && <MealsTab todayRecord={todayRecord} saveData={saveData} data={data} />}
+            {currentTab === 'workouts' && <WorkoutsTab todayRecord={todayRecord} saveData={saveData} data={data} />}
+            {currentTab === 'recovery' && <RecoveryTab todayRecord={todayRecord} saveData={saveData} data={data} />}
+            {currentTab === 'hydration' && <HydrationTab todayRecord={todayRecord} saveData={saveData} data={data} />}
+            {currentTab === 'peptides' && <PeptidesTab todayRecord={todayRecord} saveData={saveData} data={data} />}
+            {currentTab === 'historial' && <HistorialTab data={data} />}
+            {currentTab === 'datos' && <DatosTab data={data} />}
+          </div>
+
+          {/* Tab Navigation */}
+          <nav style={{ display: 'flex', gap: '2px', padding: '8px', background: isDarkMode ? '#222' : '#f5f5f5', position: 'fixed', bottom: 0, left: 0, right: 0, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {['dashboard', 'meals', 'workouts', 'recovery', 'hydration', 'peptides', 'historial', 'datos'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setCurrentTab(tab)}
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: '44px',
+                  padding: '8px 4px',
+                  background: currentTab === tab ? '#175cd3' : 'transparent',
+                  color: currentTab === tab ? '#fff' : isDarkMode ? '#999' : '#667085',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: currentTab === tab ? 'bold' : 'normal',
+                  fontSize: '12px'
+                }}
+                title={tab}
+              >
+                {tab === 'dashboard' ? '📋' : tab === 'meals' ? '🍽️' : tab === 'workouts' ? '🏋️' : tab === 'recovery' ? '💪' : tab === 'hydration' ? '💧' : tab === 'peptides' ? '💉' : tab === 'historial' ? '📊' : '📁'}
+              </button>
+            ))}
+          </nav>
+        </div>
+      );
+    }
+
+    // ============================================================================
+    // TAB COMPONENTS (Placeholders)
+    // ============================================================================
+    function DashboardTab({ todayRecord, data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Dashboard — Coming soon</div>;
+    }
+
+    function MealsTab({ todayRecord, saveData, data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Meals tab — Coming soon</div>;
+    }
+
+    function WorkoutsTab({ todayRecord, saveData, data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Workouts tab — Coming soon</div>;
+    }
+
+    function RecoveryTab({ todayRecord, saveData, data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Recovery tab — Coming soon</div>;
+    }
+
+    function HydrationTab({ todayRecord, saveData, data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Hydration tab — Coming soon</div>;
+    }
+
+    function PeptidesTab({ todayRecord, saveData, data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Peptides tab — coming soon</div>;
+    }
+
+    function HistorialTab({ data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Historial tab — Coming soon</div>;
+    }
+
+    function DatosTab({ data }) {
+      return <div style={{ padding: '16px', textAlign: 'center' }}>Datos tab — Coming soon</div>;
+    }
+
+    // ============================================================================
+    // MOUNT APP TO ROOT
+    // ============================================================================
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
 </body>
 </html>
