@@ -287,7 +287,7 @@
             {currentTab === 'recovery' && <RecoveryTab todayRecord={todayRecord} saveData={saveData} data={data} />}
             {currentTab === 'hydration' && <HydrationTab todayRecord={todayRecord} saveData={saveData} data={data} />}
             {currentTab === 'peptides' && <PeptidesTab todayRecord={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} />}
-            {currentTab === 'historial' && <HistorialTab data={data} />}
+            {currentTab === 'historial' && <HistorialTab data={data} isDarkMode={isDarkMode} />}
             {currentTab === 'datos' && <DatosTab data={data} />}
           </div>
 
@@ -351,6 +351,7 @@
 
       const today = new Date();
       const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const isMobile = window.innerWidth < 600;
 
       // Validate protocol and get alerts (Task 7)
       const alerts = useMemo(() => validateProtocol(todayRecord, dayOfWeek), [todayRecord, dayOfWeek]);
@@ -376,13 +377,21 @@
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
       };
 
+      const containerStyle = {
+        padding: isMobile ? '10px' : '16px',
+        maxWidth: '600px',
+        margin: '0 auto',
+        backgroundColor: isDarkMode ? '#1a1a1a' : '#f9f9f9',
+        color: isDarkMode ? '#e0e0e0' : '#333'
+      };
+
       const SectionHeader = ({ title, section }) => (
         <div
           onClick={() => toggleSection(section)}
           style={{
             cursor: 'pointer',
             minHeight: '44px',
-            padding: '12px',
+            padding: isMobile ? '10px 12px' : '12px 14px',
             background: isDarkMode ? '#252525' : '#f5f5f5',
             border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
             color: isDarkMode ? '#e0e0e0' : '#333',
@@ -392,7 +401,9 @@
             userSelect: 'none',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            fontSize: isMobile ? '14px' : '16px',
+            transition: 'background-color 0.2s'
           }}
         >
           <span>{title}</span>
@@ -401,16 +412,16 @@
       );
 
       return (
-        <div style={{ padding: '10px', maxWidth: '600px' }}>
+        <div style={containerStyle}>
           {/* Diarios */}
           <SectionHeader title="Diarios (cada día)" section="diarios" />
           {openSections.diarios && (
-            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #175cd3' }}>
+            <div style={{ marginBottom: '20px', paddingLeft: isMobile ? '8px' : '10px', borderLeft: '3px solid #175cd3' }}>
               {diarios.length === 0 ? (
-                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No diarios</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999', fontSize: isMobile ? '14px' : '16px' }}>No diarios</p>
               ) : (
                 diarios.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} isMobile={isMobile} />
                 ))
               )}
             </div>
@@ -419,12 +430,12 @@
           {/* 3x/Semana */}
           <SectionHeader title="3x/Semana" section="threeWeek" />
           {openSections.threeWeek && (
-            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #108a00' }}>
+            <div style={{ marginBottom: '20px', paddingLeft: isMobile ? '8px' : '10px', borderLeft: '3px solid #108a00' }}>
               {threeWeek.filter(shouldShowToday).length === 0 ? (
-                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999', fontSize: isMobile ? '14px' : '16px' }}>No aplicable hoy</p>
               ) : (
                 threeWeek.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} isMobile={isMobile} /> : null
                 ))
               )}
             </div>
@@ -433,12 +444,12 @@
           {/* Según Día */}
           <SectionHeader title="Según Día" section="segunDia" />
           {openSections.segunDia && (
-            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #f59e0b' }}>
+            <div style={{ marginBottom: '20px', paddingLeft: isMobile ? '8px' : '10px', borderLeft: '3px solid #f59e0b' }}>
               {segunDia.filter(shouldShowToday).length === 0 ? (
-                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999', fontSize: isMobile ? '14px' : '16px' }}>No aplicable hoy</p>
               ) : (
                 segunDia.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} isMobile={isMobile} /> : null
                 ))
               )}
             </div>
@@ -447,12 +458,12 @@
           {/* Opcionales */}
           <SectionHeader title="Opcionales — Evidencia Débil" section="opcionales" />
           {openSections.opcionales && (
-            <div style={{ marginBottom: '20px', paddingLeft: '10px', borderLeft: '3px solid #999' }}>
+            <div style={{ marginBottom: '20px', paddingLeft: isMobile ? '8px' : '10px', borderLeft: '3px solid #999' }}>
               {opcionales.length === 0 ? (
-                <p style={{ color: isDarkMode ? '#666' : '#999' }}>No opcionales</p>
+                <p style={{ color: isDarkMode ? '#666' : '#999', fontSize: isMobile ? '14px' : '16px' }}>No opcionales</p>
               ) : (
                 opcionales.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} isMobile={isMobile} />
                 ))
               )}
             </div>
@@ -467,6 +478,7 @@
     function DosageModal({ peptide, entry, onSave, onClose, isDarkMode }) {
       const [dosage, setDosage] = useState(entry.dosage_applied || peptide.dosage_protocol || 50);
       const [notes, setNotes] = useState(entry.notes || '');
+      const isMobile = window.innerWidth < 600;
 
       const handleSave = () => {
         entry.dosage_applied = dosage;
@@ -475,85 +487,98 @@
         onClose();
       };
 
+      const modalStyle = {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: isMobile ? '16px' : '0'
+      };
+
+      const contentStyle = {
+        backgroundColor: isDarkMode ? '#1a1a1a' : '#fff',
+        padding: isMobile ? '16px' : '20px',
+        borderRadius: '8px',
+        minWidth: isMobile ? '100%' : '300px',
+        maxWidth: isMobile ? '100%' : '500px',
+        width: isMobile ? '100%' : 'auto',
+        maxHeight: isMobile ? '90vh' : 'auto',
+        overflowY: isMobile ? 'auto' : 'visible',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        color: isDarkMode ? '#e0e0e0' : '#333'
+      };
+
+      const labelStyle = {
+        color: isDarkMode ? '#bbb' : '#666',
+        fontSize: isMobile ? '14px' : '14px',
+        marginBottom: '6px',
+        display: 'block'
+      };
+
+      const inputStyle = {
+        width: '100%',
+        padding: '10px',
+        marginTop: '6px',
+        fontSize: '16px',
+        borderRadius: '4px',
+        border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`,
+        backgroundColor: isDarkMode ? '#2a2a2a' : '#fff',
+        color: isDarkMode ? '#e0e0e0' : '#333',
+        boxSizing: 'border-box',
+        minHeight: '44px'
+      };
+
       return (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: isDarkMode ? '#1a1a1a' : '#fff',
-            padding: '20px',
-            borderRadius: '8px',
-            minWidth: '300px',
-            maxWidth: '500px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            color: isDarkMode ? '#e0e0e0' : '#333'
-          }}>
-            <h3 style={{ marginBottom: '15px', color: isDarkMode ? '#e0e0e0' : '#333' }}>{entry.label}</h3>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ color: isDarkMode ? '#bbb' : '#666' }}>Dosis (L1-L100):</label><br />
+        <div style={modalStyle}>
+          <div style={contentStyle}>
+            <h3 style={{ marginBottom: '16px', color: isDarkMode ? '#e0e0e0' : '#333', fontSize: isMobile ? '16px' : '18px' }}>{entry.label}</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Dosis (L1-L100):</label>
               <input
                 type="number"
                 min="1"
                 max="100"
                 value={dosage}
                 onChange={(e) => setDosage(parseInt(e.target.value) || 50)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginTop: '5px',
-                  fontSize: '16px',
-                  borderRadius: '4px',
-                  border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`,
-                  backgroundColor: isDarkMode ? '#2a2a2a' : '#fff',
-                  color: isDarkMode ? '#e0e0e0' : '#333',
-                  boxSizing: 'border-box'
-                }}
+                style={inputStyle}
               />
             </div>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ color: isDarkMode ? '#bbb' : '#666' }}>Notas (max 200 chars):</label><br />
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Notas (max 200 chars):</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value.slice(0, 200))}
                 maxLength="200"
                 style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginTop: '5px',
-                  fontSize: '14px',
-                  minHeight: '80px',
-                  borderRadius: '4px',
-                  border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`,
-                  backgroundColor: isDarkMode ? '#2a2a2a' : '#fff',
-                  color: isDarkMode ? '#e0e0e0' : '#333',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit'
+                  ...inputStyle,
+                  minHeight: '100px',
+                  resize: 'vertical'
                 }}
                 placeholder="Observaciones, sitio de inyección, etc"
               />
               <div style={{ fontSize: '12px', color: isDarkMode ? '#999' : '#999', marginTop: '4px' }}>{notes.length}/200</div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               <button
                 onClick={onClose}
                 style={{
-                  padding: '8px 16px',
+                  padding: isMobile ? '12px 16px' : '8px 16px',
+                  minHeight: '44px',
+                  minWidth: isMobile ? '48%' : 'auto',
                   cursor: 'pointer',
                   backgroundColor: isDarkMode ? '#444' : '#ccc',
                   color: isDarkMode ? '#e0e0e0' : '#333',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  transition: 'background-color 0.2s'
                 }}
               >
                 Cancelar
@@ -561,14 +586,17 @@
               <button
                 onClick={handleSave}
                 style={{
-                  padding: '8px 16px',
+                  padding: isMobile ? '12px 16px' : '8px 16px',
+                  minHeight: '44px',
+                  minWidth: isMobile ? '48%' : 'auto',
                   cursor: 'pointer',
                   backgroundColor: '#2ecc71',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  transition: 'background-color 0.2s'
                 }}
               >
                 Guardar
@@ -579,7 +607,7 @@
       );
     }
 
-    function PeptideItem({ peptide, record, saveData, data, isDarkMode, alerts = [] }) {
+    function PeptideItem({ peptide, record, saveData, data, isDarkMode, alerts = [], isMobile }) {
       // Initialize state for this peptide entry
       const [entry, setEntry] = useState(() => {
         if (!record.peptides) record.peptides = [];
@@ -647,7 +675,7 @@
             <div
               key={idx}
               style={{
-                padding: '10px',
+                padding: isMobile ? '10px 10px' : '10px 12px',
                 marginBottom: '8px',
                 borderRadius: '4px',
                 backgroundColor: alert.type === 'critical'
@@ -657,7 +685,7 @@
                 color: alert.type === 'critical'
                   ? (isDarkMode ? '#ffcccc' : '#8b0000')
                   : (isDarkMode ? '#fff3cd' : '#856404'),
-                fontSize: '13px',
+                fontSize: isMobile ? '13px' : '13px',
                 fontWeight: '500'
               }}
             >
@@ -667,20 +695,20 @@
 
           <div style={{
             border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
-            padding: '10px',
+            padding: isMobile ? '10px' : '12px',
             marginBottom: '10px',
             borderRadius: '4px',
-            backgroundColor: isDarkMode ? '#1a1a1a' : '#f9f9f9'
+            backgroundColor: isDarkMode ? '#252525' : '#f9f9f9'
           }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px', color: isDarkMode ? '#e0e0e0' : '#333' }}>{entry.label}</div>
-            <div style={{ fontSize: '12px', color: isDarkMode ? '#999' : '#666', marginBottom: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px', color: isDarkMode ? '#e0e0e0' : '#333', fontSize: isMobile ? '14px' : '15px' }}>{entry.label}</div>
+            <div style={{ fontSize: isMobile ? '13px' : '12px', color: isDarkMode ? '#999' : '#666', marginBottom: '10px' }}>
               🧬 {entry.mechanism}
             </div>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              marginTop: '8px',
+              gap: isMobile ? '8px' : '10px',
+              marginTop: '10px',
               minHeight: '44px',
               flexWrap: 'wrap'
             }}>
@@ -691,54 +719,62 @@
                 value={entry.dosage_applied}
                 onChange={handleDosageChange}
                 style={{
-                  width: '60px',
+                  width: isMobile ? '56px' : '60px',
                   minWidth: '44px',
-                  padding: '6px',
-                  fontSize: '14px',
+                  padding: isMobile ? '8px' : '6px',
+                  fontSize: '16px',
+                  minHeight: '44px',
                   borderRadius: '4px',
                   border: `1px solid ${isDarkMode ? '#444' : '#ccc'}`,
                   backgroundColor: isDarkMode ? '#2a2a2a' : '#fff',
-                  color: isDarkMode ? '#e0e0e0' : '#333'
+                  color: isDarkMode ? '#e0e0e0' : '#333',
+                  boxSizing: 'border-box'
                 }}
                 placeholder="L"
               />
-              <span style={{ color: isDarkMode ? '#aaa' : '#666' }}>L</span>
+              <span style={{ color: isDarkMode ? '#aaa' : '#666', fontSize: isMobile ? '14px' : '14px' }}>L</span>
               <button
                 onClick={handleStatusClick}
                 style={{
-                  padding: '6px 12px',
+                  padding: isMobile ? '8px 10px' : '6px 12px',
                   cursor: 'pointer',
                   backgroundColor: statusColor,
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   minWidth: '44px',
                   minHeight: '44px',
                   fontWeight: 'bold',
-                  transition: 'background-color 0.2s'
+                  transition: 'background-color 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}
                 title={`Status: ${statusLabel}`}
               >
-                {statusSymbol} {statusLabel}
+                <span style={{ fontSize: '12px', marginRight: '4px' }}>{statusSymbol}</span>
+                <span style={{ fontSize: isMobile ? '12px' : '13px' }}>{isMobile ? statusLabel.substring(0, 3) : statusLabel}</span>
               </button>
               <button
                 onClick={() => setShowModal(true)}
                 style={{
-                  padding: '6px 12px',
+                  padding: isMobile ? '8px 10px' : '6px 12px',
                   cursor: 'pointer',
                   backgroundColor: '#3498db',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   minHeight: '44px',
                   fontWeight: 'bold',
-                  transition: 'background-color 0.2s'
+                  transition: 'background-color 0.2s',
+                  flexShrink: 0
                 }}
                 title="Editar dosificación y notas"
               >
-                Editar
+                {isMobile ? 'Edit' : 'Editar'}
               </button>
             </div>
           </div>
@@ -755,7 +791,7 @@
       );
     }
 
-    function HistorialTab({ data }) {
+    function HistorialTab({ data, isDarkMode }) {
       const getPeptideHistory = () => {
         const history = [];
         for (let i = 0; i < 7; i++) {
@@ -793,39 +829,39 @@
 
       return (
         <div style={{ padding: '16px' }}>
-          <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold' }}>Péptidos — Últimos 7 días</h3>
+          <h3 style={{ marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', color: isDarkMode ? '#ddd' : '#000' }}>Péptidos — Últimos 7 días</h3>
 
           {peptideHistory.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+            <div style={{ padding: '20px', textAlign: 'center', color: isDarkMode ? '#aaa' : '#999' }}>
               No hay registros de péptidos en los últimos 7 días
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #ddd' }}>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Fecha</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Péptido</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Dosis</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Estado</th>
-                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>Hora</th>
+                  <tr style={{ backgroundColor: isDarkMode ? '#252525' : '#f0f0f0', borderBottom: `2px solid ${isDarkMode ? '#333' : '#ddd'}` }}>
+                    <th style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', textAlign: 'left', color: isDarkMode ? '#ddd' : '#000' }}>Fecha</th>
+                    <th style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', textAlign: 'left', color: isDarkMode ? '#ddd' : '#000' }}>Péptido</th>
+                    <th style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', textAlign: 'left', color: isDarkMode ? '#ddd' : '#000' }}>Dosis</th>
+                    <th style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', textAlign: 'left', color: isDarkMode ? '#ddd' : '#000' }}>Estado</th>
+                    <th style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', textAlign: 'left', color: isDarkMode ? '#ddd' : '#000' }}>Hora</th>
                   </tr>
                 </thead>
                 <tbody>
                   {peptideHistory.map((row, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.date}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.peptide}</td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.dosage}</td>
+                    <tr key={idx} style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : '#eee'}` }}>
+                      <td style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', color: isDarkMode ? '#ccc' : '#000' }}>{row.date}</td>
+                      <td style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', color: isDarkMode ? '#ccc' : '#000' }}>{row.peptide}</td>
+                      <td style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', color: isDarkMode ? '#ccc' : '#000' }}>{row.dosage}</td>
                       <td style={{
-                        border: '1px solid #ddd',
+                        border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
                         padding: '8px',
                         color: getStatusColor(row.status),
                         fontWeight: 'bold'
                       }}>
                         {getStatusSymbol(row.status)} {row.status}
                       </td>
-                      <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.time}</td>
+                      <td style={{ border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`, padding: '8px', color: isDarkMode ? '#ccc' : '#000' }}>{row.time}</td>
                     </tr>
                   ))}
                 </tbody>
