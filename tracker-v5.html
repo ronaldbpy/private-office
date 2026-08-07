@@ -19,6 +19,7 @@
       padding: 16px;
       text-align: center;
       border-bottom: 1px solid #333;
+      position: relative;
     }
     header h1 { font-size: 18px; margin-bottom: 12px; }
     .controls { display: flex; gap: 8px; justify-content: center; align-items: center; }
@@ -30,25 +31,32 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .section { margin-bottom: 16px; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
-    .section-header { background: #252525; padding: 12px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .section-header { background: #252525; padding: 12px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #175cd3; }
     .section-header:hover { background: #2a2a2a; }
     .section-body { padding: 12px; display: none; }
     .section-body.open { display: block; }
     .peptide-item { background: #1a1a1a; border: 1px solid #333; padding: 12px; margin-bottom: 8px; border-radius: 4px; }
     .peptide-name { font-weight: bold; margin-bottom: 4px; }
     .peptide-mechanism { font-size: 12px; color: #aaa; margin-bottom: 8px; }
-    .peptide-controls { display: flex; gap: 8px; align-items: center; }
+    .peptide-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .peptide-controls input { width: 60px; padding: 6px; }
-    .peptide-controls .dosage-unit { margin-left: -4px; }
     .status-btn { padding: 6px 12px; background: #f39c12; color: black; border: none; cursor: pointer; border-radius: 3px; font-size: 12px; }
     .status-btn.done { background: #2ecc71; color: white; }
     .status-btn.skipped { background: #95a5a6; color: white; }
     .edit-btn { padding: 6px 12px; background: #175cd3; color: white; border: none; cursor: pointer; border-radius: 3px; font-size: 12px; }
     nav { display: flex; gap: 8px; padding: 8px; background: #102a43; border-top: 1px solid #333; flex-wrap: wrap; justify-content: center; }
-    nav button { padding: 10px; flex: 1; min-width: 60px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #333; cursor: pointer; border-radius: 4px; }
+    nav button { padding: 10px; flex: 1; min-width: 60px; background: #1a1a1a; color: #e0e0e0; border: 1px solid #333; cursor: pointer; border-radius: 4px; font-size: 12px; }
     nav button.active { background: #175cd3; color: white; }
     nav button:hover { background: #252525; }
     .placeholder { text-align: center; padding: 40px; color: #666; }
+    .stat-box { background: #252525; border: 1px solid #333; padding: 12px; border-radius: 4px; margin-bottom: 8px; }
+    .stat-label { font-size: 12px; color: #aaa; }
+    .stat-value { font-size: 18px; font-weight: bold; margin-top: 4px; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .history-table th, .history-table td { border: 1px solid #333; padding: 8px; text-align: left; }
+    .history-table th { background: #252525; font-weight: bold; }
+    .history-table tr:hover { background: #252525; }
+    .meal-item { background: #252525; padding: 8px; margin-bottom: 4px; border-radius: 3px; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -63,19 +71,12 @@
       </div>
     </header>
 
-    <main id="content">
-      <!-- Tabs will be generated here -->
-    </main>
+    <main id="content"></main>
 
-    <nav id="tabs">
-      <!-- Tab buttons will be generated here -->
-    </nav>
+    <nav id="tabs"></nav>
   </div>
 
   <script>
-    // ============================================================================
-    // DATA & STATE
-    // ============================================================================
     let currentTab = 'dashboard';
     let isDarkMode = true;
     let data = null;
@@ -83,49 +84,44 @@
 
     const PEPTIDE_DATA = {
       activos: [
-        { id: 'bpc157_am', label: 'BPC-157 (mañana)', mechanism: '🧬 Angiogénesis, curación tendones/ligamentos, repara mucosa GI', dosage_protocol: 50, frequency: 'daily' },
-        { id: 'bpc157_pm', label: 'BPC-157 (noche)', mechanism: '🧬 Angiogénesis, curación tendones/ligamentos, repara mucosa GI', dosage_protocol: 50, frequency: 'daily' },
-        { id: 'cjc_ipa', label: 'CJC/Ipamorelin', mechanism: '🧬 GH secretagogos sinérgicos, pulso GH fisiológico', dosage_protocol: 30, frequency: 'daily' },
-        { id: 'ghk_cu', label: 'GHK-Cu (independiente)', mechanism: '🧬 Síntesis colágeno tipo I/III, elastina, glicosaminoglicanos', dosage_protocol: 50, frequency: 'weekdays_only' },
-        { id: 'mots_c', label: 'MOTS-C', mechanism: '🧬 Regulador metabólico, activa AMPK, mejora sensibilidad insulina', dosage_protocol: 50, frequency: '3x_week' },
-        { id: 'nad', label: 'NAD+', mechanism: '🧬 Coenzima metabólico mitocondrial, reparación ADN, activación sirtuinas', dosage_protocol: 50, frequency: '3x_week' },
-        { id: 'ta1', label: 'Thymosin Alpha-1', mechanism: '🧬 Inmunomodulador, mejora función células T, aprobado clínico (Zadaxin)', dosage_protocol: 50, frequency: '2x_week' },
-        { id: 'ss31', label: 'SS-31 (Elamipretide)', mechanism: '🧬 Protección mitocondrial, estabiliza cadena de electrones, reduce estrés oxidativo', dosage_protocol: 50, frequency: 'daily' },
-        { id: 'klow', label: 'KLOW (sin GHK-Cu)', mechanism: '🧬 Blend: BPC-157/TB-500/KPV, reparación + antiinflamatorio vía NF-κB', dosage_protocol: 50, frequency: '2x_week' },
-        { id: 'pt141', label: 'PT-141 (Bremelanotide)', mechanism: '🧬 Agonista melanocortina (MC3R/MC4R) central, deseo sexual', dosage_protocol: 50, frequency: 'on_demand' },
-        { id: 'retatrutida', label: 'Retatrutida', mechanism: '🧬 Triple agonista GLP-1/GIP/Glucagón, titulación conservadora', dosage_protocol: 50, frequency: 'weekly' },
-        { id: 'semax_selank', label: 'Semax+Selank', mechanism: '🧬 Neuropéptidos cognitivos, estrés, neuroplasticidad', dosage_protocol: 50, frequency: '2x_week' }
+        { id: 'bpc157_am', label: 'BPC-157 (mañana)', mechanism: '🧬 Angiogénesis', dosage_protocol: 50, frequency: 'daily' },
+        { id: 'bpc157_pm', label: 'BPC-157 (noche)', mechanism: '🧬 Angiogénesis', dosage_protocol: 50, frequency: 'daily' },
+        { id: 'cjc_ipa', label: 'CJC/Ipamorelin', mechanism: '🧬 GH secretagogos', dosage_protocol: 30, frequency: 'daily' },
+        { id: 'ghk_cu', label: 'GHK-Cu', mechanism: '🧬 Colágeno', dosage_protocol: 50, frequency: 'weekdays_only' },
+        { id: 'mots_c', label: 'MOTS-C', mechanism: '🧬 Metabólico', dosage_protocol: 50, frequency: '3x_week' },
+        { id: 'nad', label: 'NAD+', mechanism: '🧬 Mitocondrial', dosage_protocol: 50, frequency: '3x_week' },
+        { id: 'ta1', label: 'Thymosin Alpha-1', mechanism: '🧬 Inmune', dosage_protocol: 50, frequency: '2x_week' },
+        { id: 'ss31', label: 'SS-31', mechanism: '🧬 Protección', dosage_protocol: 50, frequency: 'daily' },
+        { id: 'klow', label: 'KLOW', mechanism: '🧬 Reparación', dosage_protocol: 50, frequency: '2x_week' },
+        { id: 'pt141', label: 'PT-141', mechanism: '🧬 Melanocortina', dosage_protocol: 50, frequency: 'on_demand' },
+        { id: 'retatrutida', label: 'Retatrutida', mechanism: '🧬 GLP-1/GIP/Glucagón', dosage_protocol: 50, frequency: 'weekly' },
+        { id: 'semax_selank', label: 'Semax+Selank', mechanism: '🧬 Cognitivo', dosage_protocol: 50, frequency: '2x_week' }
       ],
       opcionales: [
-        { id: 'ara290', label: 'ARA-290', mechanism: '🧬 Agonista receptor innata', dosage_protocol: 50, frequency: 'on_demand' },
-        { id: 'cartalax', label: 'Cartalax', mechanism: '🧬 Cartílago/tendón', dosage_protocol: 50, frequency: 'on_demand' },
-        { id: 'pinealon', label: 'Pinealon', mechanism: '🧬 Pineal, sueño', dosage_protocol: 50, frequency: 'on_demand' },
-        { id: 'dsip', label: 'DSIP', mechanism: '🧬 Péptido sueño delta', dosage_protocol: 50, frequency: 'on_demand' },
+        { id: 'ara290', label: 'ARA-290', mechanism: '🧬 Innata', dosage_protocol: 50, frequency: 'on_demand' },
+        { id: 'cartalax', label: 'Cartalax', mechanism: '🧬 Cartílago', dosage_protocol: 50, frequency: 'on_demand' },
+        { id: 'pinealon', label: 'Pinealon', mechanism: '🧬 Sueño', dosage_protocol: 50, frequency: 'on_demand' },
+        { id: 'dsip', label: 'DSIP', mechanism: '🧬 Sueño Delta', dosage_protocol: 50, frequency: 'on_demand' },
         { id: 'slupp332', label: 'SLU-PP-332', mechanism: '🧬 Neuroprotección', dosage_protocol: 50, frequency: 'on_demand' },
         { id: 'aod9604', label: 'AOD9604', mechanism: '🧬 Lipolítico', dosage_protocol: 50, frequency: 'on_demand' },
-        { id: 'oxytocin', label: 'Oxytocina (SC)', mechanism: '🧬 Enlace social', dosage_protocol: 50, frequency: 'on_demand' },
+        { id: 'oxytocin', label: 'Oxytocina', mechanism: '🧬 Social', dosage_protocol: 50, frequency: 'on_demand' },
         { id: 'humanin', label: 'Humanin', mechanism: '🧬 Mitocondrial', dosage_protocol: 50, frequency: 'on_demand' },
         { id: 'foxo4_dri', label: 'FOXO4-DRI', mechanism: '🧬 Senolítico', dosage_protocol: 50, frequency: 'on_demand' }
       ]
     };
 
-    // ============================================================================
-    // INITIALIZATION
-    // ============================================================================
     function init() {
       loadData();
-      render();
       setTodayDate();
+      render();
     }
 
     function loadData() {
       let stored = localStorage.getItem('rb_tracker_v5');
 
       if (!stored) {
-        // Check for v4 data and migrate
-        const v4Data = JSON.parse(localStorage.getItem('rb_tracker_v4') || null);
+        const v4Data = JSON.parse(localStorage.getItem('rb_tracker_v4') || 'null');
         if (v4Data && v4Data.records) {
-          // Migrate v4 → v5
           data = {
             version: 5,
             records: {},
@@ -142,15 +138,15 @@
               hydration: record.hydration || { liters: 0, notes: '' },
               sleep: record.sleep || { hours: 0, quality: null, notes: '' },
               recovery: record.recovery || { soreness: null, hrv: null, notes: '' },
+              weight: record.weight || null,
               peptides: [],
               checks: record.checks || {}
             };
           });
 
           localStorage.setItem('rb_tracker_v5', JSON.stringify(data));
-          console.log('✓ Migrated v4 data to v5 with ' + Object.keys(data.records).length + ' days');
+          console.log('✓ Migrated v4→v5: ' + Object.keys(data.records).length + ' days');
         } else {
-          // Fresh start
           data = {
             version: 5,
             records: {},
@@ -179,6 +175,7 @@
           hydration: { liters: 0, notes: '' },
           sleep: { hours: 0, quality: null, notes: '' },
           recovery: { soreness: null, hrv: null, notes: '' },
+          weight: null,
           peptides: [],
           checks: {}
         };
@@ -203,9 +200,7 @@
       const date = new Date(dateStr + 'T00:00:00');
       const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-      const dayName = days[date.getDay()];
-      const monthName = months[date.getMonth()];
-      document.getElementById('dateDisplay').textContent = `${dayName}, ${date.getDate()} de ${monthName}`;
+      document.getElementById('dateDisplay').textContent = `${days[date.getDay()]}, ${date.getDate()} de ${months[date.getMonth()]}`;
     }
 
     function previousDay() {
@@ -241,9 +236,6 @@
       render();
     }
 
-    // ============================================================================
-    // RENDERING
-    // ============================================================================
     function render() {
       renderTabs();
       renderContent();
@@ -260,29 +252,52 @@
         btn.textContent = emojis[tab];
         btn.title = tab;
         if (tab === currentTab) btn.classList.add('active');
-        btn.onclick = () => switchTab(tab);
+        btn.onclick = () => { currentTab = tab; render(); };
         tabsContainer.appendChild(btn);
       });
     }
 
     function renderContent() {
       const content = document.getElementById('content');
-      if (currentTab === 'peptides') {
-        content.innerHTML = renderPeptidesTab();
-      } else if (currentTab === 'dashboard') {
-        content.innerHTML = '<div class="placeholder">Dashboard — Coming soon</div>';
-      } else {
-        content.innerHTML = `<div class="placeholder">${currentTab} tab — Coming soon</div>`;
-      }
+      if (currentTab === 'dashboard') content.innerHTML = renderDashboard();
+      else if (currentTab === 'peptides') content.innerHTML = renderPeptidesTab();
+      else if (currentTab === 'historial') content.innerHTML = renderHistorial();
+      else content.innerHTML = `<div class="placeholder">${currentTab} — Coming soon</div>`;
     }
 
-    function switchTab(tab) {
-      currentTab = tab;
-      render();
+    function renderDashboard() {
+      const mealCount = todayRecord.meals.length;
+      const workoutCount = todayRecord.workouts.length;
+      const peptidesCount = todayRecord.peptides.length;
+
+      let html = '<div style="max-width: 600px; margin: 0 auto;">';
+      html += '<h2 style="margin-bottom: 16px;">Resumen del Día</h2>';
+
+      html += '<div class="stat-box"><div class="stat-label">Comidas registradas</div><div class="stat-value">' + mealCount + '</div></div>';
+      html += '<div class="stat-box"><div class="stat-label">Entrenamientos</div><div class="stat-value">' + workoutCount + '</div></div>';
+      html += '<div class="stat-box"><div class="stat-label">Péptidos aplicados</div><div class="stat-value">' + peptidesCount + '</div></div>';
+
+      if (todayRecord.weight) {
+        html += '<div class="stat-box"><div class="stat-label">Peso</div><div class="stat-value">' + todayRecord.weight + ' kg</div></div>';
+      }
+
+      html += '<div class="stat-box"><div class="stat-label">Agua consumida</div><div class="stat-value">' + (todayRecord.hydration.liters || 0) + ' L</div></div>';
+      html += '<div class="stat-box"><div class="stat-label">Sueño</div><div class="stat-value">' + (todayRecord.sleep.hours || 0) + ' horas</div></div>';
+
+      if (todayRecord.meals.length > 0) {
+        html += '<h3 style="margin-top: 20px; margin-bottom: 8px;">Comidas</h3>';
+        todayRecord.meals.forEach(meal => {
+          html += '<div class="meal-item">📌 ' + (meal.name || 'Comida sin nombre') + ' - ' + (meal.calories || 0) + ' cal</div>';
+        });
+      }
+
+      html += '<p style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;">Datos históricos migrados desde v4. Haz clic en "Historial" para ver registros anteriores.</p>';
+      html += '</div>';
+
+      return html;
     }
 
     function renderPeptidesTab() {
-      // Pre-populate peptides if needed
       [...PEPTIDE_DATA.activos, ...PEPTIDE_DATA.opcionales].forEach(pep => {
         if (!todayRecord.peptides.find(p => p.id === pep.id)) {
           todayRecord.peptides.push({
@@ -299,27 +314,22 @@
       saveData();
 
       let html = '';
-
-      // Diarios
       const diarios = PEPTIDE_DATA.activos.filter(p => p.frequency === 'daily');
       html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Diarios (cada día) <span>▼</span></div><div class="section-body open">';
       diarios.forEach(pep => html += renderPeptideItem(pep));
       html += '</div></div>';
 
-      // 3x/Semana
       const threeWeek = PEPTIDE_DATA.activos.filter(p => ['3x_week', '2x_week', 'weekdays_only'].includes(p.frequency));
       html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">3x/Semana <span>▼</span></div><div class="section-body open">';
       threeWeek.forEach(pep => html += renderPeptideItem(pep));
       html += '</div></div>';
 
-      // Según Día
       const segunDia = PEPTIDE_DATA.activos.filter(p => p.frequency === 'weekly' || p.frequency === 'on_demand');
       html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Según Día <span>▼</span></div><div class="section-body open">';
       segunDia.forEach(pep => html += renderPeptideItem(pep));
       html += '</div></div>';
 
-      // Opcionales
-      html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Opcionales — Evidencia Débil <span>▶</span></div><div class="section-body">';
+      html += '<div class="section"><div class="section-header" onclick="toggleSection(this)">Opcionales <span>▶</span></div><div class="section-body">';
       PEPTIDE_DATA.opcionales.forEach(pep => html += renderPeptideItem(pep));
       html += '</div></div>';
 
@@ -343,12 +353,38 @@
           <div class="peptide-mechanism">${entry.mechanism}</div>
           <div class="peptide-controls">
             <input type="number" min="1" max="100" value="${entry.dosage_applied}" onchange="updateDosage('${entry.id}', this.value)">
-            <span class="dosage-unit">L</span>
+            <span style="margin-left: -4px;">L</span>
             <button class="status-btn ${statusClass}" onclick="toggleStatus('${entry.id}')" title="Status: ${statusText}">○ ${statusText}</button>
-            <button class="edit-btn" onclick="editPeptide('${entry.id}')">Editar</button>
           </div>
         </div>
       `;
+    }
+
+    function renderHistorial() {
+      const dates = Object.keys(data.records).sort().reverse().slice(0, 30);
+
+      let html = '<h2 style="margin-bottom: 16px;">Historial (últimos 30 días)</h2>';
+      html += '<table class="history-table"><thead><tr><th>Fecha</th><th>Comidas</th><th>Entrenamientos</th><th>Peso</th><th>Agua (L)</th><th>Sueño (h)</th><th>Péptidos</th></tr></thead><tbody>';
+
+      dates.forEach(date => {
+        const record = data.records[date];
+        const d = new Date(date + 'T00:00:00');
+        const dateStr = d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+
+        html += `<tr>
+          <td>${dateStr}</td>
+          <td>${record.meals.length}</td>
+          <td>${record.workouts.length}</td>
+          <td>${record.weight ? record.weight + ' kg' : '-'}</td>
+          <td>${record.hydration.liters || 0}</td>
+          <td>${record.sleep.hours || 0}</td>
+          <td>${record.peptides.filter(p => p.status === 'done').length}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table><p style="margin-top: 16px; font-size: 12px; color: #666;">Total de registros: ' + Object.keys(data.records).length + '</p>';
+
+      return html;
     }
 
     function toggleSection(header) {
@@ -378,11 +414,6 @@
       }
     }
 
-    function editPeptide(id) {
-      alert('Edit modal coming soon for peptide: ' + id);
-    }
-
-    // Initialize on load
     init();
   </script>
 </body>
