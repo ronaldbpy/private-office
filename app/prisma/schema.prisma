@@ -23,10 +23,17 @@ enum EntityType {
   PERSONAL_PROFILE // ej: RUC personal de Ronald
 }
 
+enum CompanyType {
+  PERSONAL_SERVICE // Servicios personales (RUC personal — consultoría, etc.)
+  EVENT_SERVICES // Servicios de eventos (Casa Amelia — alquileres, catering, etc.)
+  CONSULTING // Consultoría empresarial, administración, finanzas (Axentia)
+}
+
 model Entity {
-  id           String     @id @default(uuid())
+  id           String      @id @default(uuid())
   name         String // ej: "Axentia EAS"
   type         EntityType
+  companyType  CompanyType? // PERSONAL_SERVICE | EVENT_SERVICES | CONSULTING
   taxId        String? // RUC — puede ser un placeholder genérico mientras status = pending_incorporation
   jurisdiction String? // ej: "Paraguay"
   baseCurrency String? // ISO 4217, ej: "PYG"
@@ -38,9 +45,9 @@ model Entity {
   // vencimiento tributario de un vistazo. Token, no un hex directo, para que
   // el color se resuelva vía CSS y respete dark mode (ver globals.css).
   colorToken   String?
-  status       String     @default("active") // active | pending_incorporation | suspended | closed (MD-300 invariant: nunca se borra)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  status       String      @default("active") // active | pending_incorporation | suspended | closed (MD-300 invariant: nunca se borra)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   userAccess   UserAccess[]
   partyLinks   PartyEntityLink[]
@@ -54,6 +61,8 @@ model Entity {
   intelligenceReports IntelligenceReport[] @relation("EntityIntelligence")
   customers    Customer[] @relation("EntityCustomers")
   products     Product[] @relation("EntityProducts")
+  suppliers    Supplier[] @relation("EntitySuppliers")
+  inventory    InventoryItem[] @relation("EntityInventory")
   quotes       Quote[] @relation("EntityQuotes")
   invoices     Invoice[] @relation("EntityInvoices")
   events       Event[] @relation("EntityEvents")
@@ -527,34 +536,72 @@ model Customer {
   @@map("customers")
 }
 
-model Product {
+model Supplier {
   id              String   @id @default(uuid())
   entityId        String
-  entity          Entity   @relation("EntityProducts", fields: [entityId], references: [id])
+  entity          Entity   @relation("EntitySuppliers", fields: [entityId], references: [id])
 
-  code            String   // código interno del producto
-  name            String
-  description     String?
-  category        String?
+  fullName        String
+  businessName    String?  // razón social si es empresa
+  taxId           String?  // RUC/cédula
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  country         String?
 
-  // Precios
-  unitPrice       Decimal  @db.Decimal(18, 2) // precio unitario
-  cost            Decimal? @db.Decimal(18, 2) // costo interno
-  currency        String   @default("PYG")
+  // Clasificación
+  supplierType    String   @default("individual") // individual | business
+  status          String   @default("active") // active | inactive | archived
 
-  // Inventario
-  quantity        Int      @default(0)
-  unit            String   @default("unidad") // unidad, kg, litro, etc.
+  // Términos de pago
+  paymentTerms    String?  // ej: "30 días"
+  bankAccount     String?  // datos bancarios del proveedor
 
-  // Fiscal
-  taxRate         Decimal  @default(10) @db.Decimal(5, 2) // IVA %
-
-  status          String   @default("active") // active | discontinued | archived
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  purchaseInvoices Invoice[] @relation("purchaseInvoices")
+
+  @@unique([entityId, taxId])
+  @@map("suppliers")
+}
+
+enum ProductType {
+  PRODUCT  // producto físico (mesas, sillas, bebidas, etc.)
+  SERVICE  // servicio (catering, sonido, iluminación, etc.)
+}
+
+model Product {
+  id              String      @id @default(uuid())
+  entityId        String
+  entity          Entity      @relation("EntityProducts", fields: [entityId], references: [id])
+
+  code            String      // código interno del producto
+  name            String
+  description     String?
+  category        String?
+  productType     ProductType @default(PRODUCT) // PRODUCT | SERVICE
+
+  // Precios
+  unitPrice       Decimal     @db.Decimal(18, 2) // precio unitario
+  cost            Decimal?    @db.Decimal(18, 2) // costo interno
+  currency        String      @default("PYG")
+
+  // Inventario (principalmente para PRODUCT en Amelia)
+  quantity        Int         @default(0)
+  unit            String      @default("unidad") // unidad, kg, litro, etc.
+
+  // Fiscal
+  taxRate         Decimal     @default(10) @db.Decimal(5, 2) // IVA %
+
+  status          String      @default("active") // active | discontinued | archived
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
   quoteItems      QuoteItem[]
   invoiceItems    InvoiceItem[]
+  inventoryItems  InventoryItem[]
 
   @@unique([entityId, code])
   @@map("products")
@@ -617,11 +664,13 @@ model Invoice {
   id              String        @id @default(uuid())
   entityId        String
   entity          Entity        @relation("EntityInvoices", fields: [entityId], references: [id])
-  customerId      String?       // nullable para facturas de compra sin cliente
+  customerId      String?       // para facturas de VENTA
   customer        Customer?     @relation(fields: [customerId], references: [id])
+  supplierId      String?       // para facturas de COMPRA
+  supplier        Supplier?     @relation("purchaseInvoices", fields: [supplierId], references: [id])
 
   invoiceNumber   String
-  invoiceType     InvoiceType
+  invoiceType     InvoiceType   // SALE | PURCHASE
   status          String        @default("draft") // draft | issued | paid | cancelled
 
   // Montos
@@ -710,6 +759,33 @@ model Event {
   @@index([entityId])
   @@index([startDate])
   @@map("events")
+}
+
+// ---------------------------------------------------------------------------
+// INVENTORY — Stock de productos (Casa Amelia)
+// ---------------------------------------------------------------------------
+
+model InventoryItem {
+  id              String   @id @default(uuid())
+  entityId        String
+  entity          Entity   @relation("EntityInventory", fields: [entityId], references: [id])
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Stock actual
+  quantity        Decimal  @db.Decimal(18, 4)
+  location        String?  // ej: "Almacén A", "Mesa de catering", etc.
+  status          String   @default("available") // available | in_use | damaged | archived
+
+  // Auditoría
+  lastStockCheck  DateTime?
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([entityId, productId])
+  @@map("inventory_items")
 }
 
 // ---------------------------------------------------------------------------
