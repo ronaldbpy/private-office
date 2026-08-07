@@ -120,8 +120,10 @@
       let stored = localStorage.getItem('rb_tracker_v5');
 
       if (!stored) {
+        // Try v4 migration
         const v4Data = JSON.parse(localStorage.getItem('rb_tracker_v4') || 'null');
-        if (v4Data && v4Data.records) {
+
+        if (v4Data && v4Data.records && Object.keys(v4Data.records).length > 0) {
           data = {
             version: 5,
             records: {},
@@ -144,16 +146,38 @@
             };
           });
 
-          localStorage.setItem('rb_tracker_v5', JSON.stringify(data));
-          console.log('✓ Migrated v4→v5: ' + Object.keys(data.records).length + ' days');
+          console.log('✓ v4→v5: ' + Object.keys(data.records).length + ' days');
         } else {
+          // Fresh start with sample data for last 7 days
           data = {
             version: 5,
             records: {},
             macroTargets: { protein: 200, carbs: 300, fat: 80 },
             syncedAt: Date.now()
           };
+
+          // Seed 7 days of sample data
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            data.records[dateStr] = {
+              date: dateStr,
+              meals: i === 0 ? [] : [{ name: 'Desayuno', calories: 400 }],
+              workouts: i === 0 ? [] : [{ name: 'Cardio', duration: 30 }],
+              supplements: { taken: [], notes: '' },
+              hydration: { liters: i === 0 ? 0 : 2.5, notes: '' },
+              sleep: { hours: i === 0 ? 0 : 7.5, quality: null, notes: '' },
+              recovery: { soreness: null, hrv: null, notes: '' },
+              weight: 75 + (Math.random() * 2 - 1),
+              peptides: [],
+              checks: {}
+            };
+          }
+
+          console.log('✓ Created sample data: 7 days');
         }
+        localStorage.setItem('rb_tracker_v5', JSON.stringify(data));
       } else {
         data = JSON.parse(stored);
       }
