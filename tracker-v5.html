@@ -149,6 +149,73 @@
     }
 
     // ============================================================================
+    // PROTOCOL VALIDATION FUNCTION (Task 7)
+    // ============================================================================
+    function validateProtocol(record, dayOfWeek) {
+      const alerts = [];
+
+      const peptides = record.peptides || [];
+      const meals = record.meals || [];
+
+      const pt141 = peptides.find(p => p.id === 'pt141' && p.status === 'done');
+      const cjc = peptides.find(p => p.id === 'cjc_ipa' && p.status === 'done');
+      const motsC = peptides.find(p => p.id === 'mots_c' && p.status === 'done');
+      const ghkCu = peptides.find(p => p.id === 'ghk_cu');
+      const retatrutida = peptides.find(p => p.id === 'retatrutida');
+
+      // Validation 1: PT-141 + CJC same day (CRITICAL)
+      if (pt141 && cjc) {
+        alerts.push({
+          peptideId: 'pt141',
+          type: 'critical',
+          message: '🔴 PT-141 no se aplica el mismo día que CJC/Ipamorelin'
+        });
+      }
+
+      // Validation 2: MOTS-C requires fasting (WARNING)
+      if (motsC && meals.length > 0) {
+        alerts.push({
+          peptideId: 'mots_c',
+          type: 'warning',
+          message: '⚠️ MOTS-C debe aplicarse en ayunas'
+        });
+      }
+
+      // Validation 3: GHK-Cu weekdays only (CRITICAL on weekend)
+      if (ghkCu && ghkCu.status !== 'pending' && (dayOfWeek === 0 || dayOfWeek === 6)) {
+        alerts.push({
+          peptideId: 'ghk_cu',
+          type: 'critical',
+          message: '🔴 GHK-Cu no se aplica sábado/domingo'
+        });
+      }
+
+      // Validation 4: Retatrutida titration (WARNING if mismatch)
+      if (retatrutida && retatrutida.status === 'done') {
+        const weekNum = Math.ceil(new Date(record.date).getDate() / 7);
+        const expectedDose = weekNum <= 2 ? 2.5 : weekNum === 3 ? 5 : 10;
+        if (Math.abs(retatrutida.dosage_applied - expectedDose) > 2) {
+          alerts.push({
+            peptideId: 'retatrutida',
+            type: 'warning',
+            message: `⚠️ Semana ${weekNum}: dosis esperada ${expectedDose}L, aplicada ${retatrutida.dosage_applied}L`
+          });
+        }
+      }
+
+      // Validation 5: CJC requires 2h fasting (WARNING if meal logged)
+      if (cjc && meals.length > 0) {
+        alerts.push({
+          peptideId: 'cjc_ipa',
+          type: 'warning',
+          message: '⚠️ CJC/Ipamorelin requiere ≥2h de ayuno'
+        });
+      }
+
+      return alerts;
+    }
+
+    // ============================================================================
     // APP COMPONENT WITH TAB NAVIGATION (INCLUDING PEPTIDES)
     // ============================================================================
     function App() {
@@ -285,6 +352,9 @@
       const today = new Date();
       const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
+      // Validate protocol and get alerts (Task 7)
+      const alerts = useMemo(() => validateProtocol(todayRecord, dayOfWeek), [todayRecord, dayOfWeek]);
+
       // Helper: should peptide show today based on frequency?
       const shouldShowToday = (peptide) => {
         if (peptide.frequency === 'daily') return true;
@@ -340,7 +410,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No diarios</p>
               ) : (
                 diarios.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} />
                 ))
               )}
             </div>
@@ -354,7 +424,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
               ) : (
                 threeWeek.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} /> : null
                 ))
               )}
             </div>
@@ -368,7 +438,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No aplicable hoy</p>
               ) : (
                 segunDia.map(pep => (
-                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} /> : null
+                  shouldShowToday(pep) ? <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} /> : null
                 ))
               )}
             </div>
@@ -382,7 +452,7 @@
                 <p style={{ color: isDarkMode ? '#666' : '#999' }}>No opcionales</p>
               ) : (
                 opcionales.map(pep => (
-                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} />
+                  <PeptideItem key={pep.id} peptide={pep} record={todayRecord} saveData={saveData} data={data} isDarkMode={isDarkMode} alerts={alerts} />
                 ))
               )}
             </div>
@@ -509,7 +579,7 @@
       );
     }
 
-    function PeptideItem({ peptide, record, saveData, data, isDarkMode }) {
+    function PeptideItem({ peptide, record, saveData, data, isDarkMode, alerts = [] }) {
       // Initialize state for this peptide entry
       const [entry, setEntry] = useState(() => {
         if (!record.peptides) record.peptides = [];
@@ -531,6 +601,9 @@
       });
 
       const [showModal, setShowModal] = useState(false);
+
+      // Filter alerts for this peptide (Task 7)
+      const peptideAlerts = alerts.filter(a => a.peptideId === peptide.id);
 
       const handleStatusClick = () => {
         const states = ['pending', 'done', 'skipped'];
@@ -569,6 +642,25 @@
 
       return (
         <>
+          {/* Render protocol alerts (Task 7) */}
+          {peptideAlerts.map((alert, idx) => (
+            <div
+              key={idx}
+              style={{
+                padding: '10px',
+                marginBottom: '8px',
+                borderRadius: '4px',
+                backgroundColor: alert.type === 'critical' ? '#ffcccc' : '#fff3cd',
+                borderLeft: `4px solid ${alert.type === 'critical' ? '#cc0000' : '#ff9800'}`,
+                color: alert.type === 'critical' ? '#8b0000' : '#856404',
+                fontSize: '13px',
+                fontWeight: '500'
+              }}
+            >
+              {alert.message}
+            </div>
+          ))}
+
           <div style={{
             border: `1px solid ${isDarkMode ? '#333' : '#ddd'}`,
             padding: '10px',
