@@ -3,8 +3,8 @@
 <head><meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#102a43">
-  <link rel="manifest" href="tracker-manifest.json">
-  <link rel="icon" href="icon-192.png">
+  <link rel="manifest" href="/tracker/tracker-manifest.json">
+  <link rel="icon" href="/tracker/icon-192.png">
   <title>RB Tracker v6.0 - Elite Protocol</title>
   <style>
   /* ==========================================================================
@@ -716,11 +716,36 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
+
+  /* ---- 17. Phase selector & settings (Task 9) ---------------------------------------*/
+  .phase-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .phase-card:hover { border-color: var(--border-strong); }
+  .phase-card.active { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+  .phase-card + .phase-card { margin-top: var(--space-3); }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
+// ==========================================================================
+// TRACKER v6.0 — PWA SERVICE WORKER REGISTRATION (Task 11)
+// Mirrors the registration pattern used in app/public/tracker.html (v5.x).
+// Scope is /tracker/ to match the deployed path on Bluehost
+// (public_html/tracker/), where this file is uploaded as index.html.
+// ==========================================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/tracker/tracker-sw.js', { scope: '/tracker/' })
+    .catch(e => console.log('SW registration failed:', e));
+}
+
 // ==========================================================================
 // TRACKER v6.0 — DATA LAYER (Task 1: Data Schema & Embedded Databases)
 // Skeleton + data layer only. No UI yet (added in later tasks).
@@ -1011,6 +1036,209 @@ console.log('[tracker-v6] data layer loaded', {
   PEPTIDES_DB: PEPTIDES_DB.length,
   state
 });
+
+// --------------------------------------------------------------------------
+// MEAL BUILDER MODAL (Task 4)
+// Consumes: FOOD_DB, MEAL_TEMPLATES, getMacrosByWeight(), rec(), save(), esc(), n()
+// Produces: mealBuilderModal(), toggleRaw(), updateMacrosPreview(), closeMeal(),
+//           addMealTemplate(templateId), handleMealSubmit(e)
+// Glue (not in the task's named-function list, but needed to actually open
+// the modal and wire its listeners until Task 6/8 add the "Comida" quick
+// action + main render loop): openMealModal(), attachMealModalListeners()
+// --------------------------------------------------------------------------
+
+// Local UI state for the currently-open meal modal. Reset every time the
+// modal opens; toggleRaw() flips it, updateMacrosPreview()/handleMealSubmit()
+// read it.
+let mealBuilderState = { isCocido: false };
+
+// mealBuilderModal() → HTML string for the full modal (overlay + panel).
+// Renders: quick meal-template chips, a food <select> (32 FOOD_DB entries,
+// alphabetized — native <select> gives free keyboard-typeahead/autocomplete),
+// a weight input, a Crudo/Cocido toggle button, a live macros preview card,
+// and a footer with Cancel / "Agregar a hoy" submit.
+function mealBuilderModal() {
+  const foodOptions = FOOD_DB
+    .slice()
+    .sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
+    .map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; })
+    .join('');
+
+  const templateChips = MEAL_TEMPLATES
+    .map(function (t) {
+      // Chip label: short code before the " · " separator (e.g. "D1", "P3").
+      const shortLabel = t.name.split(' · ')[0];
+      return '<button type="button" class="btn secondary sm" style="white-space:nowrap" ' +
+        'onclick="addMealTemplate(\'' + esc(t.id) + '\')" title="' + esc(t.name) + '">' +
+        esc(shortLabel) + '</button>';
+    })
+    .join('');
+
+  return '' +
+    '<div class="modal-overlay" id="mealModalOverlay" onclick="if(event.target===this) closeMeal()">' +
+      '<div class="modal active" id="mealModal" role="dialog" aria-modal="true" aria-labelledby="mealModalTitle">' +
+        '<div class="modal-header">' +
+          '<h2 id="mealModalTitle">Agregar comida</h2>' +
+          '<button type="button" class="modal-close" onclick="closeMeal()" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<div class="form-group">' +
+            '<label>Plantillas rápidas</label>' +
+            '<div class="flex gap-2" style="overflow-x:auto; padding-bottom:4px;">' + templateChips + '</div>' +
+          '</div>' +
+
+          '<div class="banner info text-center">o construye tu propia comida</div>' +
+
+          '<form id="mealForm">' +
+            '<div class="form-group">' +
+              '<label for="foodSelect">Alimento</label>' +
+              '<select id="foodSelect" required>' +
+                '<option value="" disabled selected>Selecciona un alimento…</option>' +
+                foodOptions +
+              '</select>' +
+            '</div>' +
+
+            '<div class="form-row">' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="mealWeight">Peso (g)</label>' +
+                '<input type="number" id="mealWeight" inputmode="decimal" min="1" step="1" placeholder="220" required>' +
+              '</div>' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label>&nbsp;</label>' +
+                '<button type="button" class="btn secondary block" id="crudoCocidoToggle" onclick="toggleRaw()">Crudo</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="macro-preview" id="macrosPreview">' +
+              '<div><div class="macro-value" id="previewProt">0g</div><div class="macro-label">Prot</div></div>' +
+              '<div><div class="macro-value" id="previewCarb">0g</div><div class="macro-label">Carb</div></div>' +
+              '<div><div class="macro-value" id="previewFat">0g</div><div class="macro-label">Grasa</div></div>' +
+              '<div><div class="macro-value" id="previewKcal">0</div><div class="macro-label">Kcal</div></div>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button type="button" class="btn secondary" onclick="closeMeal()">Cancelar</button>' +
+          '<button type="submit" form="mealForm" class="btn">Agregar a hoy</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// openMealModal() → inserts mealBuilderModal() into the DOM and wires its
+// listeners. This is the glue future quick-action buttons (Task 6) will
+// call; kept here so Task 4 is testable end-to-end on its own.
+function openMealModal() {
+  mealBuilderState = { isCocido: false };
+  closeMeal(); // remove any stale instance first
+  document.body.insertAdjacentHTML('beforeend', mealBuilderModal());
+  attachMealModalListeners();
+}
+
+// attachMealModalListeners() → form submit, select change, weight input.
+function attachMealModalListeners() {
+  const form = document.getElementById('mealForm');
+  const select = document.getElementById('foodSelect');
+  const weight = document.getElementById('mealWeight');
+  if (form) form.addEventListener('submit', handleMealSubmit);
+  if (select) select.addEventListener('change', updateMacrosPreview);
+  if (weight) weight.addEventListener('input', updateMacrosPreview);
+}
+
+// toggleRaw() → flips the Crudo/Cocido interpretation of the weight input,
+// relabels the toggle button, and recomputes the live preview.
+function toggleRaw() {
+  mealBuilderState.isCocido = !mealBuilderState.isCocido;
+  const btn = document.getElementById('crudoCocidoToggle');
+  if (btn) btn.textContent = mealBuilderState.isCocido ? 'Cocido' : 'Crudo';
+  updateMacrosPreview();
+}
+
+// updateMacrosPreview() → reads the current food select + weight input,
+// computes macros via getMacrosByWeight(), writes them into the preview card.
+function updateMacrosPreview() {
+  const select = document.getElementById('foodSelect');
+  const weightInput = document.getElementById('mealWeight');
+  const foodId = select ? select.value : '';
+  const grams = weightInput ? n(weightInput.value) : 0;
+  const macros = (foodId && grams > 0)
+    ? getMacrosByWeight(foodId, grams, mealBuilderState.isCocido)
+    : { prot: 0, carb: 0, fat: 0, kcal: 0 };
+
+  const setText = function (id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  setText('previewProt', macros.prot + 'g');
+  setText('previewCarb', macros.carb + 'g');
+  setText('previewFat', macros.fat + 'g');
+  setText('previewKcal', Math.round(macros.kcal));
+}
+
+// closeMeal() → removes the modal overlay from the DOM, if present.
+function closeMeal() {
+  const overlay = document.getElementById('mealModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// addMealTemplate(templateId) → looks up a MEAL_TEMPLATES entry and appends
+// it (with its precomputed exact totals) to today's rec().meals, persists,
+// closes the modal, and re-renders if the main render loop (Task 8) exists.
+function addMealTemplate(templateId) {
+  const tpl = MEAL_TEMPLATES.find(function (t) { return t.id === templateId; });
+  if (!tpl) return;
+
+  const meal = {
+    id: 'm_' + Date.now(),
+    name: tpl.name,
+    templateId: tpl.id,
+    items: tpl.items,
+    prot: tpl.totals.prot,
+    carb: tpl.totals.carb,
+    fat: tpl.totals.fat,
+    kcal: tpl.totals.kcal,
+    timestamp: new Date().toISOString()
+  };
+  rec().meals.push(meal);
+  save();
+  closeMeal();
+  if (typeof render === 'function') render();
+}
+
+// handleMealSubmit(e) → reads the custom-weight form, computes macros for
+// the selected food + weight + crudo/cocido state, appends a meal to
+// today's rec().meals, persists, closes the modal, and re-renders if the
+// main render loop (Task 8) exists.
+function handleMealSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const select = document.getElementById('foodSelect');
+  const weightInput = document.getElementById('mealWeight');
+  const foodId = select ? select.value : '';
+  const grams = weightInput ? n(weightInput.value) : 0;
+  const food = FOOD_DB.find(function (f) { return f.id === foodId; });
+  if (!food || grams <= 0) return;
+
+  const isCocido = mealBuilderState.isCocido;
+  const macros = getMacrosByWeight(foodId, grams, isCocido);
+
+  const meal = {
+    id: 'm_' + Date.now(),
+    name: food.nombre + ' (' + grams + 'g ' + (isCocido ? 'cocido' : 'crudo') + ')',
+    foodId: food.id,
+    gramos: grams,
+    isCocido: isCocido,
+    prot: macros.prot,
+    carb: macros.carb,
+    fat: macros.fat,
+    kcal: macros.kcal,
+    timestamp: new Date().toISOString()
+  };
+  rec().meals.push(meal);
+  save();
+  closeMeal();
+  if (typeof render === 'function') render();
+}
 </script>
 </body>
 </html>
