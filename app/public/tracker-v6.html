@@ -162,15 +162,15 @@
   header {
     background: var(--bg-header);
     color: var(--bg-header-text);
-    padding: var(--space-4) var(--space-4)
-             calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
-    padding-top: calc(var(--space-4) + env(safe-area-inset-top, 0px));
+    padding: var(--space-3) var(--space-4)
+             calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
     text-align: center;
     position: relative;
     flex-shrink: 0;
   }
-  header h1 { font-size: 17px; margin-bottom: var(--space-3); }
-  header .subtitle { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  header h1 { font-size: 15px; margin-bottom: 6px; line-height: 1.2; }
+  header .subtitle { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
 
   .controls {
     display: flex;
@@ -178,39 +178,42 @@
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
+    margin-top: var(--space-2);
   }
   .controls input[type="date"] {
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-sm);
     border: 1px solid rgba(255,255,255,0.25);
     background: rgba(255,255,255,0.08);
     color: var(--bg-header-text);
-    min-height: var(--touch-target);
+    min-height: 36px;
+    font-size: 13px;
   }
   .controls button {
-    min-height: var(--touch-target);
-    padding: var(--space-2) var(--space-4);
+    min-height: 36px;
+    padding: var(--space-1) var(--space-3);
     background: rgba(255,255,255,0.12);
     color: var(--bg-header-text);
     border: 1px solid rgba(255,255,255,0.2);
     border-radius: var(--radius-sm);
     cursor: pointer;
+    font-size: 13px;
   }
   .controls button:hover { background: rgba(255,255,255,0.2); }
 
   .theme-toggle {
     position: absolute;
-    top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
+    top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
     right: var(--space-3);
-    width: var(--touch-target);
-    height: var(--touch-target);
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(255,255,255,0.1);
     border: none;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
   }
 
@@ -828,6 +831,7 @@ const PEPTIDES_DB = [
   { id: 'cjc_ipa', nombre: 'CJC/Ipamorelin', default_dose: 30, default_frequency: 'daily', notes: 'GH secretagogos sinérgicos, pulso GH fisiológico. Requiere ≥2h de ayuno.', tier: 'core' },
   { id: 'mots_c', nombre: 'MOTS-C', default_dose: 100, default_frequency: '3x_week', notes: 'Regulador metabólico, activa AMPK, mejora sensibilidad a insulina. Aplicar en ayunas. Días: Lun/Mié/Vie.', tier: 'core' },
   { id: 'ghk_cu', nombre: 'GHK-Cu (independiente)', default_dose: 10, default_frequency: 'weekdays_only', notes: 'Síntesis colágeno tipo I/III, elastina, glicosaminoglicanos. No aplicar sábado/domingo.', tier: 'core' },
+  { id: 'tirzepatida', nombre: 'Tirzepatida', default_dose: 2.5, default_frequency: 'weekly', notes: 'Doble agonista GLP-1/GIP. Inicio: 2.5mg SC semanal (martes). Titulación cada 4 sem (2.5→5→7.5→10→12.5→15mg).', tier: 'core' },
 
   // ---- OPTIONAL (17) ----
   { id: 'retatrutida', nombre: 'Retatrutida', default_dose: null, default_frequency: 'weekly', notes: 'Triple agonista GLP-1/GIP/Glucagón, titulación conservadora. Día: martes.', tier: 'optional' },
@@ -847,6 +851,38 @@ const PEPTIDES_DB = [
   { id: 'opt_oxy', nombre: 'Oxytocin (SC)', default_dose: null, default_frequency: 'on_demand', notes: 'Modulación bienestar/vínculo social vía SNC. Evidencia sólida es intranasal, débil vía SC.', tier: 'optional' },
   { id: 'opt_humanin', nombre: 'Humanin', default_dose: null, default_frequency: '3x_week', notes: 'Péptido mitocondrial, mejora sensibilidad insulina (~1mg 3x/sem). Evidencia: sin ensayos SC, mayoría cultivo/animal.', tier: 'optional' },
   { id: 'opt_foxo4', nombre: 'FOXO4-DRI', default_dose: null, default_frequency: 'on_demand', notes: 'Senolítico, apoptosis células senescentes. Evidencia: un estudio en ratones (2017), cero humanos.', tier: 'optional' }
+];
+
+// --------------------------------------------------------------------------
+// MEDICATIONS_DB — Medicamentos: GLP-1s, analgésicos, suplementos.
+// Shape: {id, nombre, categoria, principio_activo, dosis_unidad, propiedades, inicio_date}
+// --------------------------------------------------------------------------
+const MEDICATIONS_DB = [
+  { id: 'tirzepatida', nombre: 'Tirzepatida', categoria: 'GLP-1/GIP', principio_activo: 'Tirzepatida', dosis_unidad: 'mg', propiedades: 'Doble agonista GLP-1/GIP. Suprime apetito, mejora sensibilidad insulina, pérdida de peso. Inicio: 2.5mg SC semanal, titulación cada 4 sem.', inicio_date: '2026-08-09' }
+];
+
+// --------------------------------------------------------------------------
+// HYDRATION_DB — Bebidas (hidratación)
+// --------------------------------------------------------------------------
+const HYDRATION_DB = [
+  { id: 'water_glass', name: 'Agua (250ml)', category: 'Agua', volume_ml: 250, kcal: 0, hydration_ml: 250 },
+  { id: 'water_large', name: 'Agua (500ml)', category: 'Agua', volume_ml: 500, kcal: 0, hydration_ml: 500 },
+  { id: 'water_xlarge', name: 'Agua (1000ml)', category: 'Agua', volume_ml: 1000, kcal: 0, hydration_ml: 1000 },
+  { id: 'electrolyte_standard', name: 'Solución electrolítica', category: 'Electrolitos', volume_ml: 250, kcal: 20, hydration_ml: 250 },
+  { id: 'electrolyte_lmnt', name: 'LMNT', category: 'Electrolitos', volume_ml: 500, kcal: 10, hydration_ml: 500 },
+  { id: 'coconut_water', name: 'Agua de coco', category: 'Natural', volume_ml: 250, kcal: 46, hydration_ml: 240 },
+  { id: 'sports_drink', name: 'Gatorade', category: 'Deportes', volume_ml: 250, kcal: 60, hydration_ml: 240 },
+  { id: 'coffee_black', name: 'Café', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
+  { id: 'tea_green', name: 'Té verde', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
+  { id: 'tea_black', name: 'Té negro', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
+  { id: 'herbal_tea', name: 'Infusión', category: 'Herbal', volume_ml: 200, kcal: 0, hydration_ml: 200 }
+];
+  { id: 'ibuprofen', nombre: 'Ibuprofeno', categoria: 'AINE', principio_activo: 'Ibuprofeno', dosis_unidad: 'mg', propiedades: 'Antiinflamatorio, analgésico. Dosis: 400-600mg c/6-8h. Usar con alimento. Max 1200mg/día sin prescripción.', inicio_date: null },
+  { id: 'paracetamol', nombre: 'Paracetamol (Acetaminofén)', categoria: 'Analgésico', principio_activo: 'Paracetamol', dosis_unidad: 'mg', propiedades: 'Analgésico, antipirético. Dosis: 500-1000mg c/4-6h. Max 4000mg/día. Evitar alcohol.', inicio_date: null },
+  { id: 'naproxeno', nombre: 'Naproxeno', categoria: 'AINE', principio_activo: 'Naproxeno', dosis_unidad: 'mg', propiedades: 'AINE de larga duración (8-12h). Dosis: 250-500mg c/8-12h. Usar con alimento.', inicio_date: null },
+  { id: 'tramadol', nombre: 'Tramadol', categoria: 'Analgésico opiáceo', principio_activo: 'Tramadol HCl', dosis_unidad: 'mg', propiedades: 'Analgésico débil-moderado. Dosis: 50-100mg c/4-6h. Max 400mg/día. Requiere prescripción.', inicio_date: null },
+  { id: 'magnesio', nombre: 'Magnesio (suplemento)', categoria: 'Mineral', principio_activo: 'Mg (citrato/glicinato)', dosis_unidad: 'mg', propiedades: 'Relajación muscular, sueño, migraña. Dosis: 300-400mg antes dormir. Efecto laxante posible.', inicio_date: null },
+  { id: 'acido_urico', nombre: 'Alopurinol', categoria: 'Antigota', principio_activo: 'Alopurinol', dosis_unidad: 'mg', propiedades: 'Inhibidor xantina oxidasa, reduce ácido úrico. Dosis: 100-300mg/día. Requiere prescripción y monitoreo.', inicio_date: null }
 ];
 
 // --------------------------------------------------------------------------
@@ -1001,7 +1037,7 @@ function today() {
 // not part of Task 3's Step 1 function list but needed so rec() has a
 // concrete, reusable shape to create when a date has no record yet.
 function blank(date) {
-  return { date: date, meals: [], peptides: [], checkin: null };
+  return { date: date, meals: [], peptides: [], checkin: null, hydration: [] };
 }
 
 // rec(date) → get the record for `date` (defaults to today()) from
@@ -1036,6 +1072,35 @@ function totals(meals) {
     acc.kcal += n(m.kcal);
     return acc;
   }, { prot: 0, carb: 0, fat: 0, kcal: 0 });
+}
+
+// getHydrationTotals(hydrationArray) → sum total hydration for a day
+function getHydrationTotals(hydrationArray) {
+  hydrationArray = hydrationArray || [];
+  return {
+    totalVolume: hydrationArray.reduce(function(acc, h) { return acc + n(h.volume_ml); }, 0),
+    totalHydration: hydrationArray.reduce(function(acc, h) { return acc + n(h.hydration_ml); }, 0),
+    count: hydrationArray.length
+  };
+}
+
+// getHydrationChart7Days() → array of {date, hydration_ml} for last 7 days
+function getHydrationChart7Days() {
+  const data = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayRec = state.records[dateStr];
+    const hydration = dayRec && dayRec.hydration ? dayRec.hydration : [];
+    const totals = getHydrationTotals(hydration);
+    data.push({
+      date: dateStr,
+      dayName: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d.getDay()],
+      hydration_ml: totals.totalHydration
+    });
+  }
+  return data;
 }
 
 // getMacrosByWeight(foodId, grams, isCocido) → macros for a given weight
@@ -1475,6 +1540,8 @@ function dashboard() {
         '<span class="qa-icon">💉</span><span>Inyección</span></button>' +
       '<button type="button" class="btn secondary" onclick="openCheckinModal()">' +
         '<span class="qa-icon">♥</span><span>Check-in</span></button>' +
+      '<button type="button" class="btn secondary" onclick="openHydrationModal()">' +
+        '<span class="qa-icon">💧</span><span>Beber</span></button>' +
     '</div>';
 
   const statCard = function (label, cls, consumed, target, unit) {
@@ -1489,12 +1556,16 @@ function dashboard() {
       '</div>';
   };
 
+  const hydrationData = getHydrationTotals(day.hydration || []);
+  const hydrationTarget = 3000;
+
   const statsGrid = '' +
     '<div class="stats-grid">' +
       statCard('Proteína', 'protein', t.prot, targets.protein, 'g') +
       statCard('Carbos', 'carb', t.carb, targets.carbs, 'g') +
       statCard('Grasa', 'fat', t.fat, targets.fat, 'g') +
       statCard('Calorías', 'kcal', t.kcal, targets.calories, ' kcal') +
+      statCard('Hidratación', 'hydration', hydrationData.totalHydration / 1000, hydrationTarget / 1000, ' L') +
     '</div>';
 
   const meals = day.meals || [];
@@ -1738,10 +1809,33 @@ function analyticsView() {
       '</div>'
     : '<div class="empty-state"><div class="empty-icon">&#127860;</div><div>Aún no hay comidas registradas.</div></div>';
 
+  const hydro7days = getHydrationChart7Days();
+  const hydrationChartHtml = '' +
+    '<div class="chart-card">' +
+      '<div class="chart-title">Hidratación · Últimos 7 días</div>' +
+      '<div class="chart-subtitle">Target: 3L diarios</div>' +
+      '<div style="padding:16px; background:var(--bg-sunken); border-radius:6px; margin-bottom:16px;">' +
+        hydro7days.map(function(d) {
+          const pct = Math.min(100, (d.hydration_ml / 3000) * 100);
+          const color = d.hydration_ml >= 3000 ? 'var(--color-success)' : (d.hydration_ml < 2500 ? 'var(--color-warning)' : 'var(--color-primary)');
+          return '<div style="margin-bottom:12px;">' +
+            '<div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px;">' +
+              '<span>' + d.dayName + '</span>' +
+              '<span style="font-weight:600;">' + (d.hydration_ml/1000).toFixed(2) + 'L</span>' +
+            '</div>' +
+            '<div style="width:100%; height:20px; background:var(--bg); border-radius:4px; overflow:hidden;">' +
+              '<div style="width:' + pct + '%; height:100%; background:' + color + '; transition:width 0.2s;"></div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
   return '' +
     '<h2 class="mb-3">Analítica</h2>' +
     weightChart(90) +
     macrosChart() +
+    hydrationChartHtml +
     '<div class="chart-card">' +
       '<div class="chart-title">Últimas comidas</div>' +
       '<div class="chart-subtitle">10 registros más recientes</div>' +
@@ -1812,6 +1906,19 @@ function showSettings() {
       '</div>' +
 
     '<div class="card mb-4">' +
+        '<div class="card-header"><h3>Medicamentos</h3></div>' +
+        '<div class="text-sm muted mb-3">Medicamentos activos: Tirzepatida (desde 2026-08-09)</div>' +
+        '<div class="flex flex-col gap-2">' +
+          '<div style="background:var(--bg-sunken);padding:12px;border-radius:6px;">' +
+            '<div style="font-weight:600;color:var(--color-warning);">Tirzepatida</div>' +
+            '<div class="text-sm muted">Dosis: 2.5mg | Frecuencia: Semanal (martes)</div>' +
+            '<div class="text-sm muted">Titulación: 2.5→5→7.5→10→12.5→15mg c/4 sem</div>' +
+          '</div>' +
+          '<button type="button" class="btn secondary block" onclick="showMedicationForm()">Agregar otro medicamento</button>' +
+        '</div>' +
+      '</div>' +
+
+    '<div class="card mb-4">' +
         '<div class="card-header"><h3>Datos</h3></div>' +
         '<div class="flex flex-col gap-2">' +
           '<button type="button" class="btn secondary block" data-action="export-data">Exportar JSON</button>' +
@@ -1832,6 +1939,86 @@ function showSettings() {
 // modals live outside #root so a render() elsewhere can't wipe them
 // mid-interaction, so their controls use inline onclick rather than
 // #root's data-action delegation.
+function showMedicationForm() {
+  const medOptions = MEDICATIONS_DB.map(function (med) {
+    return '<option value="' + med.id + '">' + esc(med.nombre) + ' (' + med.categoria + ')</option>';
+  }).join('');
+
+  const html = '' +
+    '<div class="modal-overlay" id="medModalOverlay" onclick="if(event.target===this) closeMedicationForm()">' +
+      '<div class="modal active" id="medModal" role="dialog" aria-modal="true" aria-labelledby="medModalTitle">' +
+        '<div class="modal-header">' +
+          '<h2 id="medModalTitle">Agregar medicamento</h2>' +
+          '<button type="button" class="modal-close" onclick="closeMedicationForm()" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<form id="medicationForm" onsubmit="handleAddMedication(event)">' +
+            '<div class="form-group">' +
+              '<label for="medSelect">Medicamento</label>' +
+              '<select id="medSelect" required>' +
+                '<option value="">Seleccionar...</option>' + medOptions +
+              '</select>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label for="medDosis">Dosis inicial</label>' +
+              '<input type="number" id="medDosis" inputmode="decimal" min="0.1" step="0.1" placeholder="Ej: 2.5" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label for="medFecha">Fecha inicio (YYYY-MM-DD)</label>' +
+              '<input type="date" id="medFecha" value="' + today() + '" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label for="medNotas">Notas</label>' +
+              '<textarea id="medNotas" placeholder="Frecuencia, indicaciones, etc." rows="2"></textarea>' +
+            '</div>' +
+            '<div class="form-actions">' +
+              '<button type="submit" class="btn block">Agregar medicamento</button>' +
+              '<button type="button" class="btn secondary block" onclick="closeMedicationForm()">Cancelar</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  const overlay = document.getElementById('medModalOverlay');
+  if (overlay) overlay.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('medSelect').focus();
+}
+
+function closeMedicationForm() {
+  const overlay = document.getElementById('medModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+function handleAddMedication(e) {
+  e.preventDefault();
+  const medId = document.getElementById('medSelect').value;
+  const dosis = n(document.getElementById('medDosis').value);
+  const fecha = document.getElementById('medFecha').value;
+  const notas = document.getElementById('medNotas').value;
+
+  const med = MEDICATIONS_DB.find(function (m) { return m.id === medId; });
+  if (!med || !dosis || !fecha) {
+    showSettingsStatus('Error: complete los campos');
+    return;
+  }
+
+  if (!state.medications) state.medications = {};
+  state.medications[medId] = {
+    id: medId,
+    dosis_actual: dosis,
+    fecha_inicio: fecha,
+    estado: 'activo',
+    notas: notas
+  };
+
+  save();
+  closeMedicationForm();
+  render();
+  showSettingsStatus('Medicamento agregado: ' + med.nombre);
+}
+
 function phaseSelector() {
   const cards = Object.keys(PROTOCOLS).map(function (key) {
     const p = PROTOCOLS[key];
@@ -1874,6 +2061,80 @@ function openPhaseSelector() {
 // closePhaseSelector() → removes the phase modal overlay from the DOM, if present.
 function closePhaseSelector() {
   const overlay = document.getElementById('phaseModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// Hydration Modal & Handlers
+function openHydrationModal() {
+  const drinkOptions = HYDRATION_DB.map(function(d) {
+    return '<option value="' + d.id + '">' + esc(d.name) + ' (' + d.volume_ml + 'ml)</option>';
+  }).join('');
+
+  const html = '' +
+    '<div class="modal-overlay" id="hydrationModalOverlay" onclick="if(event.target===this) closeHydrationModal()">' +
+      '<div class="modal active" id="hydrationModal" role="dialog" aria-modal="true">' +
+        '<div class="modal-header"><h2>Registrar bebida</h2>' +
+          '<button type="button" class="modal-close" onclick="closeHydrationModal()">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<div class="flex gap-2 mb-3">' +
+            '<button type="button" class="btn secondary sm" onclick="addHydrationQuick(\'water_glass\')">250ml agua</button>' +
+            '<button type="button" class="btn secondary sm" onclick="addHydrationQuick(\'water_large\')">500ml agua</button>' +
+            '<button type="button" class="btn secondary sm" onclick="addHydrationQuick(\'electrolyte_lmnt\')">LMNT</button>' +
+          '</div>' +
+          '<form id="hydrationForm" onsubmit="handleHydrationSubmit(event)">' +
+            '<div class="form-group">' +
+              '<label>Bebida</label>' +
+              '<select id="hydrationDrink" required>' +
+                '<option value="">Seleccionar...</option>' + drinkOptions +
+              '</select>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Volumen (ml)</label>' +
+              '<input type="number" id="hydrationVolume" inputmode="decimal" min="10" step="10" placeholder="250" required>' +
+            '</div>' +
+            '<div class="form-actions">' +
+              '<button type="submit" class="btn block">Registrar</button>' +
+              '<button type="button" class="btn secondary block" onclick="closeHydrationModal()">Cancelar</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('hydrationForm').addEventListener('submit', handleHydrationSubmit);
+}
+
+function addHydrationQuick(drinkId) {
+  const drink = HYDRATION_DB.find(function(d) { return d.id === drinkId; });
+  if (!drink) return;
+  const day = rec(currentDate);
+  if (!day.hydration) day.hydration = [];
+  day.hydration.push({ id: drink.id, name: drink.name, volume_ml: drink.volume_ml, hydration_ml: drink.hydration_ml, kcal: drink.kcal });
+  save();
+  closeHydrationModal();
+  render();
+}
+
+function handleHydrationSubmit(e) {
+  e.preventDefault();
+  const drinkId = document.getElementById('hydrationDrink').value;
+  const volume = n(document.getElementById('hydrationVolume').value);
+  if (!drinkId || volume <= 0) return;
+  const drink = HYDRATION_DB.find(function(d) { return d.id === drinkId; });
+  if (!drink) return;
+  const ratio = volume / drink.volume_ml;
+  const day = rec(currentDate);
+  if (!day.hydration) day.hydration = [];
+  day.hydration.push({ id: drink.id, name: drink.name, volume_ml: volume, hydration_ml: drink.hydration_ml * ratio, kcal: drink.kcal });
+  save();
+  closeHydrationModal();
+  render();
+}
+
+function closeHydrationModal() {
+  const overlay = document.getElementById('hydrationModalOverlay');
   if (overlay) overlay.remove();
 }
 
@@ -2034,7 +2295,10 @@ function load() {
     protocols: PROTOCOLS,
     records: {},
     selectedPhase: 'Anabolismo',
-    macroTargets: PROTOCOLS.Anabolismo.targets
+    macroTargets: PROTOCOLS.Anabolismo.targets,
+    medications: {
+      tirzepatida: { id: 'tirzepatida', dosis_actual: 2.5, fecha_inicio: '2026-08-09', estado: 'activo', notas: '' }
+    }
   };
   try {
     const raw = localStorage.getItem('rb_tracker_v6');
@@ -2045,7 +2309,8 @@ function load() {
       protocols: PROTOCOLS,
       records: saved.records || {},
       selectedPhase: saved.selectedPhase || 'Anabolismo',
-      macroTargets: saved.macroTargets || PROTOCOLS.Anabolismo.targets
+      macroTargets: saved.macroTargets || PROTOCOLS.Anabolismo.targets,
+      medications: saved.medications || defaults.medications
     };
   } catch (e) {
     console.error('[tracker-v6] load() failed, using defaults', e);
