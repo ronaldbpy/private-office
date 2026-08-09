@@ -900,6 +900,100 @@ const MEAL_TEMPLATES = [
 ];
 
 // --------------------------------------------------------------------------
+// UTIL FUNCTIONS & HELPERS (Task 3)
+// --------------------------------------------------------------------------
+
+// n(x) → coerce any value to a finite number, defaulting to 0.
+function n(x) {
+  const v = Number(x);
+  return Number.isFinite(v) ? v : 0;
+}
+
+// esc(x) → escape HTML special chars for safe display (prevents injection
+// when interpolating user-entered text — notes, food names, etc. — into
+// innerHTML strings in later tasks).
+function esc(x) {
+  return String(x).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+// today() → ISO date string (YYYY-MM-DD) for "right now", adjusted for the
+// local timezone offset so it reflects the user's local calendar day
+// rather than the UTC day (plain `new Date().toISOString()` would drift
+// to the wrong date near midnight in negative-UTC-offset timezones).
+function today() {
+  const d = new Date();
+  const localMs = d.getTime() - d.getTimezoneOffset() * 60000;
+  return new Date(localMs).toISOString().slice(0, 10);
+}
+
+// blank(date) → fresh day record shape. Internal helper used by rec();
+// not part of Task 3's Step 1 function list but needed so rec() has a
+// concrete, reusable shape to create when a date has no record yet.
+function blank(date) {
+  return { date: date, meals: [], peptides: [], checkin: null };
+}
+
+// rec(date) → get the record for `date` (defaults to today()) from
+// state.records, creating a blank one first if it doesn't exist yet.
+function rec(date) {
+  date = date || today();
+  if (!state.records[date]) {
+    state.records[date] = blank(date);
+  }
+  return state.records[date];
+}
+
+// save() → persist the whole app state to localStorage under the v6 key.
+function save() {
+  try {
+    localStorage.setItem('rb_tracker_v6', JSON.stringify(state));
+  } catch (e) {
+    console.error('[tracker-v6] save() failed', e);
+  }
+  return state;
+}
+
+// totals(meals) → sum {prot, carb, fat, kcal} across an array of meal-like
+// objects (each already carrying its own macro totals). Defaults to
+// today's logged meals when called with no argument.
+function totals(meals) {
+  meals = meals || rec().meals || [];
+  return meals.reduce(function (acc, m) {
+    acc.prot += n(m.prot);
+    acc.carb += n(m.carb);
+    acc.fat += n(m.fat);
+    acc.kcal += n(m.kcal);
+    return acc;
+  }, { prot: 0, carb: 0, fat: 0, kcal: 0 });
+}
+
+// getMacrosByWeight(foodId, grams, isCocido) → macros for a given weight
+// of a FOOD_DB item. `grams` is interpreted as raw ("crudo") weight by
+// default; when isCocido is true, `grams` is cooked weight and is first
+// converted back to its raw equivalent via factor_cocido_sobre_crudo
+// (cooked_grams / factor = raw_grams) before applying the food's
+// crudo_100g macro rates. Values are rounded to 1 decimal place.
+function getMacrosByWeight(foodId, grams, isCocido) {
+  isCocido = isCocido || false;
+  const food = FOOD_DB.find(function (f) { return f.id === foodId; });
+  if (!food) return { prot: 0, carb: 0, fat: 0, kcal: 0 };
+
+  const gramsCrudo = isCocido ? n(grams) / food.factor_cocido_sobre_crudo : n(grams);
+  const ratio = gramsCrudo / 100;
+  const base = food.crudo_100g;
+  const round1 = function (x) { return Math.round(x * 10) / 10; };
+
+  return {
+    prot: round1(base.prot * ratio),
+    carb: round1(base.carb * ratio),
+    fat: round1(base.grasa * ratio),
+    kcal: round1(base.kcal * ratio)
+  };
+}
+
+// --------------------------------------------------------------------------
 // STATE — initial app state
 // --------------------------------------------------------------------------
 let state = {
