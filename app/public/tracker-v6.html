@@ -2661,11 +2661,67 @@ function migrateFromV5() {
 }
 
 // --------------------------------------------------------------------------
+// SEED DATA — generates 30 days of sample data for demo (if empty & user requests)
+// --------------------------------------------------------------------------
+function seedDemoData() {
+  const baseDate = new Date(2026, 7, 10); // August 10, 2026
+  const baseWeight = 88.0;
+
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+
+    // Realistic weight trend (slight daily variation)
+    const weight = baseWeight - (i * 0.15) + (Math.random() - 0.5) * 0.4;
+
+    // Random meals 2-3 per day
+    const mealCount = 2 + Math.floor(Math.random() * 2);
+    const meals = [];
+    const mealNames = ['Desayuno', 'Almuerzo', 'Merienda', 'Cena'];
+    for (let j = 0; j < mealCount; j++) {
+      meals.push({
+        name: mealNames[j % 4],
+        items: [{foodId: 'pollo', gramos_crudo: 150 + Math.random() * 100}],
+        prot: 35 + Math.random() * 20,
+        carb: 40 + Math.random() * 30,
+        fat: 15 + Math.random() * 10,
+        kcal: 550 + Math.random() * 300
+      });
+    }
+
+    // 60% chance of check-in (weight logging)
+    const checkin = Math.random() > 0.4 ? {
+      water: 2.5 + Math.random() * 1.5,
+      sleep: 7 + Math.random() * 2,
+      quality: ['poor', 'avg', 'good', 'excellent'][Math.floor(Math.random() * 4)],
+      weight: weight,
+      notes: ''
+    } : null;
+
+    // 30% chance of peptide injection
+    const peptides = Math.random() > 0.7 ? [{
+      id: ['PT-141', 'CJC', 'MOTS-C'][Math.floor(Math.random() * 3)],
+      dose: Math.floor(Math.random() * 10) + 50,
+      time: '07:00'
+    }] : [];
+
+    state.records[dateStr] = { date: dateStr, meals, checkin, peptides };
+  }
+  save();
+  console.log('[tracker-v6] seeded 30 days of demo data');
+}
+
+// --------------------------------------------------------------------------
 // INIT — bootstraps the app once the data layer + all views are defined.
 // --------------------------------------------------------------------------
 applyStoredTheme();
 state = load();
-if (Object.keys(state.records).length === 0) migrateFromV5();
+if (Object.keys(state.records).length === 0) {
+  migrateFromV5();
+  // Uncomment next line to seed demo data if still empty after migration:
+  // if (Object.keys(state.records).length === 0) seedDemoData();
+}
 attachEventListeners();
 render();
 </script>
