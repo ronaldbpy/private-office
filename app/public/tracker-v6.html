@@ -624,6 +624,15 @@
   .chart-legend .legend-item { display: flex; align-items: center; gap: 4px; }
   .chart-legend .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 
+  /* Weight bar chart (Task 7): one <rect> per logged day, native <title> for
+     hover tooltips. Min/max bars get a distinct fill so they read at a glance
+     alongside the text labels analyticsView() prints above/below the chart. */
+  .chart-svg .weight-bar { fill: var(--color-primary); opacity: 0.82; transition: opacity 0.15s ease, fill 0.15s ease; cursor: default; }
+  .chart-svg .weight-bar:hover { opacity: 1; fill: var(--color-accent); }
+  .chart-svg .weight-bar.is-max { fill: var(--color-warning); }
+  .chart-svg .weight-bar.is-min { fill: var(--color-success); }
+  .chart-svg .weight-bar.is-max:hover, .chart-svg .weight-bar.is-min:hover { opacity: 1; }
+
   /* ---- 12. Tables ------------------------------------------------------------------*/
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: var(--space-4); }
   .data-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 480px; }
@@ -1239,6 +1248,1391 @@ function handleMealSubmit(e) {
   closeMeal();
   if (typeof render === 'function') render();
 }
+
+// --------------------------------------------------------------------------
+// PLACEHOLDER VIEWS (Task 8 glue — Tasks 6/7/9 replace these)
+// dashboard(), analyticsView(), and showSettings() below are intentionally
+// minimal: real content wired to real state (not lorem-ipsum stubs), just
+// enough for the render loop / tab switching / date navigation implemented
+// in this task to be genuinely testable end-to-end before their full specs
+// land. Task 6 replaces dashboard() with the phase-aware hero + quick
+// actions; Task 7 replaces analyticsView() with the SVG charts + meal
+// history table; Task 9 replaces showSettings() with the phase selector +
+// targets editor + export/import. Keep the same "no-arg, returns an HTML
+// string" signature when replacing them so render() needs no changes.
+// --------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------
+// DASHBOARD (Task 6: Dashboard Hero & Quick Actions)
+// Replaces the Task 8 placeholder dashboard() above with the real
+// phase-aware hero + quick actions + stats grid + meal list.
+// Consumes: rec(currentDate), totals(), PROTOCOLS, state.selectedPhase,
+//           state.macroTargets
+// Produces: dashboard(), delMeal(index)
+//   (plus private helpers: macroPct, ringMarkup, heroAnabolismo,
+//    heroRetatrutida, heroPurga, getWeightHistory, getLastMealTimestamp,
+//    formatDuration)
+// --------------------------------------------------------------------------
+
+// macroPct(consumed, target) → integer percent, 0 when target is falsy.
+function macroPct(consumed, target) {
+  if (!target) return 0;
+  return Math.round((consumed / target) * 100);
+}
+
+// ringMarkup(pct) → SVG progress ring used at the top of every phase's
+// hero. `pct` is clamped to [0,100] for the ring's own fill (it can
+// legitimately exceed 100% in the surrounding text — the ring just tops
+// out visually).
+function ringMarkup(pct) {
+  const clamped = Math.max(0, Math.min(100, n(pct)));
+  const r = 38;
+  const c = 2 * Math.PI * r;
+  const offset = c - (clamped / 100) * c;
+  return '' +
+    '<div class="hero-ring">' +
+      '<svg viewBox="0 0 88 88">' +
+        '<circle class="ring-track" cx="44" cy="44" r="' + r + '"></circle>' +
+        '<circle class="ring-fill" cx="44" cy="44" r="' + r + '" ' +
+          'style="stroke-dasharray:' + c.toFixed(1) + ';stroke-dashoffset:' + offset.toFixed(1) + '"></circle>' +
+      '</svg>' +
+      '<div class="ring-label">' + Math.round(n(pct)) + '%</div>' +
+    '</div>';
+}
+
+// heroAnabolismo(t, targets) → kcal-% focused hero (per plan: "Anabolismo: kcal%").
+function heroAnabolismo(t, targets) {
+  const pct = macroPct(t.kcal, targets.calories);
+  return '' +
+    '<div class="hero-headline">' + t.kcal.toFixed(0) + ' / ' + targets.calories + ' kcal</div>' +
+    '<div class="hero-subline">Fase de construcción muscular — superávit controlado</div>' +
+    '<div class="hero-ring-row">' +
+      ringMarkup(pct) +
+      '<div class="hero-metrics">' +
+        '<div class="metric-row"><span>Proteína</span><span class="val">' + t.prot.toFixed(0) + 'g / ' + targets.protein + 'g</span></div>' +
+        '<div class="metric-row"><span>Carbos</span><span class="val">' + t.carb.toFixed(0) + 'g / ' + targets.carbs + 'g</span></div>' +
+        '<div class="metric-row"><span>Grasa</span><span class="val">' + t.fat.toFixed(0) + 'g / ' + targets.fat + 'g</span></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// getWeightHistory() → all {date, weight} pairs recorded via check-in,
+// sorted ascending by date. Used by the Retatrutida hero's trend line;
+// full charting is Task 7's job — this just needs "latest vs previous".
+function getWeightHistory() {
+  return Object.keys(state.records)
+    .filter(function (d) { return state.records[d].checkin && state.records[d].checkin.weight != null; })
+    .sort()
+    .map(function (d) { return { date: d, weight: n(state.records[d].checkin.weight) }; });
+}
+
+// heroRetatrutida(t, targets) → weight-trend focused hero (per plan:
+// "Retatrutida: weight trend").
+function heroRetatrutida(t, targets) {
+  const hist = getWeightHistory();
+  const latest = hist.length ? hist[hist.length - 1] : null;
+  const prev = hist.length > 1 ? hist[hist.length - 2] : null;
+  const pct = macroPct(t.kcal, targets.calories);
+
+  let trendHtml;
+  if (latest) {
+    const delta = prev ? (latest.weight - prev.weight) : 0;
+    const arrow = delta < 0 ? '&darr;' : (delta > 0 ? '&uarr;' : '&rarr;');
+    const deltaColor = delta <= 0 ? '#8fe3b0' : '#ffb4b0';
+    trendHtml = '' +
+      '<div class="hero-headline">' + latest.weight.toFixed(1) + ' kg</div>' +
+      '<div class="hero-subline">' +
+        (prev
+          ? ('<span style="color:' + deltaColor + '">' + arrow + ' ' + Math.abs(delta).toFixed(1) + ' kg</span> vs. check-in anterior')
+          : 'Primer registro de peso — sigue haciendo check-in para ver la tendencia') +
+      '</div>';
+  } else {
+    trendHtml = '' +
+      '<div class="hero-headline">Sin registros de peso</div>' +
+      '<div class="hero-subline">Añade tu primer check-in para ver la tendencia</div>';
+  }
+
+  return '' +
+    trendHtml +
+    '<div class="hero-ring-row">' +
+      ringMarkup(pct) +
+      '<div class="hero-metrics">' +
+        '<div class="metric-row"><span>Kcal hoy</span><span class="val">' + t.kcal.toFixed(0) + ' / ' + targets.calories + '</span></div>' +
+        '<div class="metric-row"><span>Proteína</span><span class="val">' + t.prot.toFixed(0) + 'g / ' + targets.protein + 'g</span></div>' +
+        '<div class="metric-row"><span>Carbos</span><span class="val">' + t.carb.toFixed(0) + 'g / ' + targets.carbs + 'g</span></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// getLastMealTimestamp() → epoch ms of the most recent logged meal across
+// *all* recorded days (not just the viewed one), or null if none exist yet.
+function getLastMealTimestamp() {
+  let last = null;
+  Object.keys(state.records).forEach(function (d) {
+    (state.records[d].meals || []).forEach(function (m) {
+      if (m.timestamp) {
+        const ts = new Date(m.timestamp).getTime();
+        if (!last || ts > last) last = ts;
+      }
+    });
+  });
+  return last;
+}
+
+// formatDuration(ms) → "HH:MM" elapsed, floored to the minute.
+function formatDuration(ms) {
+  const totalMin = Math.max(0, Math.floor(ms / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
+
+// heroPurga(t, targets) → fasting-timer focused hero (per plan: "Purga:
+// ayuno timer").
+function heroPurga(t, targets) {
+  const lastTs = getLastMealTimestamp();
+  const elapsed = lastTs != null ? (Date.now() - lastTs) : null;
+  const pct = macroPct(t.kcal, targets.calories);
+
+  const timerHtml = elapsed != null
+    ? '<div class="hero-headline">' + formatDuration(elapsed) + '</div><div class="hero-subline">En ayuno desde la última comida registrada</div>'
+    : '<div class="hero-headline">00:00</div><div class="hero-subline">Registra tu primera comida para iniciar el temporizador de ayuno</div>';
+
+  return '' +
+    timerHtml +
+    '<div class="hero-ring-row">' +
+      ringMarkup(pct) +
+      '<div class="hero-metrics">' +
+        '<div class="metric-row"><span>Kcal hoy</span><span class="val">' + t.kcal.toFixed(0) + ' / ' + targets.calories + '</span></div>' +
+        '<div class="metric-row"><span>Carbos</span><span class="val">' + t.carb.toFixed(0) + 'g / ' + targets.carbs + 'g</span></div>' +
+        '<div class="metric-row"><span>Proteína</span><span class="val">' + t.prot.toFixed(0) + 'g / ' + targets.protein + 'g</span></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// dashboard() → full home-view HTML: phase-aware hero, 3 quick-action
+// buttons, a P/C/G/kcal stats grid vs. the viewed day's targets, and the
+// viewed day's meal list (with a remove button per meal wired to
+// delMeal(index)).
+function dashboard() {
+  const phase = state.selectedPhase;
+  const protocol = PROTOCOLS[phase] || PROTOCOLS.Anabolismo;
+  const targets = state.macroTargets || protocol.targets;
+  const day = rec(currentDate);
+  const t = totals(day.meals);
+
+  let heroBody;
+  if (phase === 'Retatrutida') heroBody = heroRetatrutida(t, targets);
+  else if (phase === 'Purga') heroBody = heroPurga(t, targets);
+  else heroBody = heroAnabolismo(t, targets);
+
+  const hero = '' +
+    '<div class="hero">' +
+      '<div class="hero-phase-badge">' + esc(phase) + '</div>' +
+      heroBody +
+    '</div>';
+
+  const quickActions = '' +
+    '<div class="quick-actions">' +
+      '<button type="button" class="btn secondary" onclick="openMealModal()">' +
+        '<span class="qa-icon">🍽</span><span>Comida</span></button>' +
+      '<button type="button" class="btn secondary" onclick="openPeptideModal()">' +
+        '<span class="qa-icon">💉</span><span>Inyección</span></button>' +
+      '<button type="button" class="btn secondary" onclick="openCheckinModal()">' +
+        '<span class="qa-icon">♥</span><span>Check-in</span></button>' +
+    '</div>';
+
+  const statCard = function (label, cls, consumed, target, unit) {
+    const pct = macroPct(consumed, target);
+    const fillCls = pct > 100 ? 'over' : (pct >= 100 ? 'success' : '');
+    return '' +
+      '<div class="stat-card ' + cls + '">' +
+        '<div class="stat-label">' + esc(label) + '</div>' +
+        '<div class="stat-value">' + consumed.toFixed(0) + '<span class="stat-unit">' + unit + '</span></div>' +
+        '<div class="stat-target">de ' + target + unit + '</div>' +
+        '<div class="progress-bar"><div class="fill ' + fillCls + '" style="width:' + Math.min(100, pct) + '%"></div></div>' +
+      '</div>';
+  };
+
+  const statsGrid = '' +
+    '<div class="stats-grid">' +
+      statCard('Proteína', 'protein', t.prot, targets.protein, 'g') +
+      statCard('Carbos', 'carb', t.carb, targets.carbs, 'g') +
+      statCard('Grasa', 'fat', t.fat, targets.fat, 'g') +
+      statCard('Calorías', 'kcal', t.kcal, targets.calories, ' kcal') +
+    '</div>';
+
+  const meals = day.meals || [];
+  const mealItemsHtml = meals.length
+    ? meals.map(function (m, i) {
+        const time = m.timestamp ? new Date(m.timestamp).toTimeString().slice(0, 5) : '';
+        return '' +
+          '<div class="list-item">' +
+            '<div class="item-main">' +
+              '<div class="item-title">' + esc(m.name) + '</div>' +
+              '<div class="item-sub">P' + n(m.prot).toFixed(0) + ' &middot; C' + n(m.carb).toFixed(0) +
+                ' &middot; G' + n(m.fat).toFixed(0) + ' &middot; ' + Math.round(n(m.kcal)) + ' kcal</div>' +
+            '</div>' +
+            '<div class="item-meta">' + esc(time) + '</div>' +
+            '<div class="item-actions">' +
+              '<button type="button" class="remove" onclick="delMeal(' + i + ')" aria-label="Eliminar comida">&times;</button>' +
+            '</div>' +
+          '</div>';
+      }).join('')
+    : '<div class="banner info text-center">Aún no registras comidas para este día</div>';
+
+  const mealListSection = '' +
+    '<div class="card">' +
+      '<div class="card-header"><h3>Comidas &middot; ' + esc(currentDate) + '</h3><span class="badge primary">' + meals.length + '</span></div>' +
+      mealItemsHtml +
+    '</div>';
+
+  return hero + quickActions + statsGrid + mealListSection;
+}
+
+// delMeal(index) → removes a single meal from the currently viewed day's
+// rec().meals by its position in the array (matches the index used when
+// mealItemsHtml was built in dashboard() above), persists, and re-renders.
+function delMeal(index) {
+  const day = rec(currentDate);
+  if (!day.meals || index < 0 || index >= day.meals.length) return;
+  day.meals.splice(index, 1);
+  save();
+  if (typeof render === 'function') render();
+}
+
+// --------------------------------------------------------------------------
+// ANALYTICS VIEW — SVG CHARTS (Task 7)
+// Consumes: state.records, totals(), PROTOCOLS/state.macroTargets, esc(),
+//           n(), today(), currentDate, getWeightHistory() (Task 6 helper —
+//           already returns ascending {date, weight} pairs from
+//           checkin.weight, reused here instead of re-deriving it).
+// Produces: weightChart(days), macrosChart(), analyticsView()
+// Glue (not in the task's named-function list, but needed for local-
+// timezone-safe date-range math, mirroring shiftDate()/today()):
+// addDaysISO(dateStr, delta)
+// --------------------------------------------------------------------------
+
+// addDaysISO(dateStr, delta) → dateStr shifted by `delta` days using the
+// same local-midnight-safe math as shiftDate()/today(), so the 90-day/
+// 7-day chart windows below never drift a day near midnight in
+// negative-UTC-offset timezones.
+function addDaysISO(dateStr, delta) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  const localMs = d.getTime() - d.getTimezoneOffset() * 60000;
+  return new Date(localMs).toISOString().slice(0, 10);
+}
+
+// weightChart(days) → SVG bar chart of logged body weight over the last
+// `days` days (default 90), anchored on currentDate. Renders one <rect>
+// per day that actually has a checkin.weight entry — sparse real-world
+// logging reads better as evenly-spaced bars than as a mostly-empty daily
+// grid. Min/max values are printed on the chart and their bars get a
+// distinct color; every bar also carries a native SVG <title> so hovering
+// shows "dd/mm: Xkg" without any extra JS/event wiring.
+function weightChart(days) {
+  days = days || 90;
+  const endDate = currentDate || today();
+  const startDate = addDaysISO(endDate, -(days - 1));
+
+  const entries = getWeightHistory().filter(function (e) {
+    return e.date >= startDate && e.date <= endDate;
+  });
+
+  if (!entries.length) {
+    return '' +
+      '<div class="chart-card">' +
+        '<div class="chart-title">Peso corporal</div>' +
+        '<div class="chart-subtitle">Últimos ' + days + ' días</div>' +
+        '<div class="empty-state">' +
+          '<div class="empty-icon">&#9878;</div>' +
+          '<div>Sin registros de peso todavía. Usa el check-in diario para empezar tu tendencia.</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  const weights = entries.map(function (e) { return e.weight; });
+  const min = Math.min.apply(null, weights);
+  const max = Math.max.apply(null, weights);
+  const range = Math.max(max - min, 1); // avoid div-by-zero on a flat week
+
+  const W = 700, H = 220, padTop = 26, padBottom = 36, padLeft = 6, padRight = 6;
+  const chartH = H - padTop - padBottom;
+  const chartW = W - padLeft - padRight;
+  const slot = chartW / entries.length;
+  const barW = Math.max(2, slot - 2);
+
+  const fmtDate = function (d) {
+    const parts = d.split('-');
+    return parts[2] + '/' + parts[1];
+  };
+
+  const bars = entries.map(function (e, i) {
+    const x = padLeft + i * slot + (slot - barW) / 2;
+    const ratio = (e.weight - min) / range;
+    const barH = Math.max(2, ratio * chartH);
+    const y = padTop + (chartH - barH);
+    const cls = 'weight-bar' + (e.weight === max ? ' is-max' : '') + (e.weight === min ? ' is-min' : '');
+    return '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) +
+      '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" rx="1.5">' +
+        '<title>' + esc(fmtDate(e.date)) + ': ' + e.weight + ' kg</title>' +
+      '</rect>';
+  }).join('');
+
+  const delta = entries[entries.length - 1].weight - entries[0].weight;
+  const deltaLabel = (delta > 0 ? '+' : '') + delta.toFixed(1) + ' kg';
+  const deltaClass = delta > 0 ? 'danger' : (delta < 0 ? 'success' : '');
+
+  return '' +
+    '<div class="chart-card">' +
+      '<div class="card-header">' +
+        '<div>' +
+          '<div class="chart-title">Peso corporal</div>' +
+          '<div class="chart-subtitle">Últimos ' + days + ' días &middot; ' + entries.length + ' registros</div>' +
+        '</div>' +
+        '<span class="badge ' + deltaClass + '">' + esc(deltaLabel) + '</span>' +
+      '</div>' +
+      '<div class="chart-wrap">' +
+        '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+          '<text class="value-label" x="' + padLeft + '" y="12">Max ' + max + ' kg</text>' +
+          '<line class="axis-line" x1="' + padLeft + '" y1="' + (padTop + chartH) + '" x2="' + (W - padRight) + '" y2="' + (padTop + chartH) + '"/>' +
+          bars +
+          '<text class="value-label" x="' + padLeft + '" y="' + (padTop + chartH + 14) + '">Min ' + min + ' kg</text>' +
+          '<text class="axis-label" x="' + padLeft + '" y="' + (H - 4) + '">' + esc(fmtDate(entries[0].date)) + '</text>' +
+          '<text class="axis-label" x="' + (W - padRight) + '" y="' + (H - 4) + '" text-anchor="end">' + esc(fmtDate(entries[entries.length - 1].date)) + '</text>' +
+        '</svg>' +
+      '</div>' +
+    '</div>';
+}
+
+// macrosChart() → 7-day (anchored on currentDate) average P/C/G vs. the
+// active phase's targets, as three progress-bar stat cards. Averages
+// divide by 7 regardless of how many of those days actually have meals
+// logged, so a week with gaps honestly shows a lower average rather than
+// only counting logged days.
+function macrosChart() {
+  const days = 7;
+  const endDate = currentDate || today();
+
+  const sums = { prot: 0, carb: 0, fat: 0 };
+  for (let i = 0; i < days; i++) {
+    const d = addDaysISO(endDate, -i);
+    const day = state.records[d];
+    const t = totals(day ? day.meals : []);
+    sums.prot += t.prot;
+    sums.carb += t.carb;
+    sums.fat += t.fat;
+  }
+  const avg = {
+    prot: sums.prot / days,
+    carb: sums.carb / days,
+    fat: sums.fat / days
+  };
+
+  const target = state.macroTargets || PROTOCOLS[state.selectedPhase].targets;
+
+  const macroCard = function (cls, label, value, targetVal) {
+    const pct = targetVal > 0 ? Math.round((value / targetVal) * 100) : 0;
+    const fillClass = pct > 110 ? 'over' : (pct >= 90 ? 'success' : '');
+    return '' +
+      '<div class="stat-card ' + cls + '">' +
+        '<div class="stat-label">' + esc(label) + '</div>' +
+        '<div class="stat-value">' + Math.round(value) + '<span class="stat-unit">g</span></div>' +
+        '<div class="stat-target">Meta ' + Math.round(targetVal) + 'g &middot; ' + pct + '%</div>' +
+        '<div class="progress-bar"><div class="fill ' + fillClass + '" style="width:' + Math.min(pct, 100) + '%"></div></div>' +
+      '</div>';
+  };
+
+  return '' +
+    '<div class="chart-card">' +
+      '<div class="chart-title">Macros — promedio 7 días</div>' +
+      '<div class="chart-subtitle">vs. objetivos de fase ' + esc(state.selectedPhase) + '</div>' +
+      '<div class="grid grid-3">' +
+        macroCard('protein', 'Proteína', avg.prot, target.protein) +
+        macroCard('carb', 'Carbohidratos', avg.carb, target.carbs) +
+        macroCard('fat', 'Grasa', avg.fat, target.fat) +
+      '</div>' +
+    '</div>';
+}
+
+// analyticsView() → full analytics tab: title, 90-day weight bar chart,
+// 7-day macros-vs-target comparison, and the 10 most recently logged
+// meals across all recorded days. Replaces the Task 8 placeholder; keeps
+// the same no-arg/returns-HTML-string signature so render() needs no
+// changes.
+function analyticsView() {
+  const allMeals = [];
+  Object.keys(state.records).forEach(function (d) {
+    const day = state.records[d];
+    (day.meals || []).forEach(function (m) {
+      allMeals.push({
+        date: d,
+        name: m.name,
+        prot: n(m.prot),
+        carb: n(m.carb),
+        fat: n(m.fat),
+        kcal: n(m.kcal),
+        timestamp: m.timestamp || ''
+      });
+    });
+  });
+  allMeals.sort(function (a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return a.timestamp < b.timestamp ? 1 : -1;
+  });
+  const last10 = allMeals.slice(0, 10);
+
+  const mealsTable = last10.length
+    ? '<div class="table-wrap">' +
+        '<table class="data-table">' +
+          '<thead><tr><th>Fecha</th><th>Comida</th><th>Prot</th><th>Carb</th><th>Grasa</th><th>Kcal</th></tr></thead>' +
+          '<tbody>' +
+            last10.map(function (m) {
+              return '<tr>' +
+                  '<td>' + esc(m.date) + '</td>' +
+                  '<td>' + esc(m.name) + '</td>' +
+                  '<td>' + Math.round(m.prot) + 'g</td>' +
+                  '<td>' + Math.round(m.carb) + 'g</td>' +
+                  '<td>' + Math.round(m.fat) + 'g</td>' +
+                  '<td>' + Math.round(m.kcal) + '</td>' +
+                '</tr>';
+            }).join('') +
+          '</tbody>' +
+        '</table>' +
+      '</div>'
+    : '<div class="empty-state"><div class="empty-icon">&#127860;</div><div>Aún no hay comidas registradas.</div></div>';
+
+  return '' +
+    '<h2 class="mb-3">Analítica</h2>' +
+    weightChart(90) +
+    macrosChart() +
+    '<div class="chart-card">' +
+      '<div class="chart-title">Últimas comidas</div>' +
+      '<div class="chart-subtitle">10 registros más recientes</div>' +
+      mealsTable +
+    '</div>';
+}
+
+// --------------------------------------------------------------------------
+// PHASE SELECTOR & SETTINGS VIEW (Task 9)
+// Consumes: PROTOCOLS, state, save(), esc(), n(), today(), render()
+// Produces: phaseSelector(), setPhase(phaseId), showSettings()
+// Glue (mirrors Task 4/5's modal pattern): openPhaseSelector(),
+// closePhaseSelector(), handleTargetSubmit(e), exportData(),
+// handleImportFile(e), importData(parsed), handleResetClick(), resetData(),
+// showSettingsStatus(msg). Event wiring for showSettings()'s own controls
+// (they live inside #root, replaced on every render()) is added to
+// attachEventListeners() below via data-action delegation, NOT inline
+// onclick; the phaseSelector() modal is appended outside #root (like the
+// Task 4/5 modals) so it uses inline onclick instead.
+// --------------------------------------------------------------------------
+
+// showSettings() → HTML string for the Settings view: current phase
+// summary (with a "Cambiar fase" button opening phaseSelector()), a macro-
+// targets editor form (P/C/G/kcal), export/import JSON controls, and a
+// reset-data button.
+function showSettings() {
+  const phaseKey = state.selectedPhase;
+  const phase = PROTOCOLS[phaseKey] || { targets: state.macroTargets, description: '' };
+  const t = state.macroTargets || phase.targets;
+
+  return (
+    '<div class="card accent mb-4">' +
+        '<div class="card-header">' +
+          '<h3>Fase actual</h3>' +
+          '<button type="button" class="btn sm secondary" data-action="open-phase-selector">Cambiar fase</button>' +
+        '</div>' +
+        '<span class="badge primary mb-2">' + esc(phaseKey) + '</span>' +
+        '<p class="muted text-sm mt-2">' + esc(phase.description || '') + '</p>' +
+      '</div>' +
+
+    '<div class="card mb-4">' +
+        '<div class="card-header"><h3>Objetivos de macros</h3></div>' +
+        '<form id="targetForm">' +
+          '<div class="form-row">' +
+            '<div class="form-group" style="margin-bottom:0;">' +
+              '<label for="targetProtein">Proteína (g)</label>' +
+              '<input type="number" id="targetProtein" inputmode="decimal" min="0" step="1" value="' + n(t.protein) + '" required>' +
+            '</div>' +
+            '<div class="form-group" style="margin-bottom:0;">' +
+              '<label for="targetCarbs">Carbohidratos (g)</label>' +
+              '<input type="number" id="targetCarbs" inputmode="decimal" min="0" step="1" value="' + n(t.carbs) + '" required>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<div class="form-group" style="margin-bottom:0;">' +
+              '<label for="targetFat">Grasa (g)</label>' +
+              '<input type="number" id="targetFat" inputmode="decimal" min="0" step="1" value="' + n(t.fat) + '" required>' +
+            '</div>' +
+            '<div class="form-group" style="margin-bottom:0;">' +
+              '<label for="targetCalories">Calorías (kcal)</label>' +
+              '<input type="number" id="targetCalories" inputmode="decimal" min="0" step="1" value="' + n(t.calories) + '" required>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-actions">' +
+            '<button type="submit" class="btn block">Guardar objetivos</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>' +
+
+    '<div class="card mb-4">' +
+        '<div class="card-header"><h3>Datos</h3></div>' +
+        '<div class="flex flex-col gap-2">' +
+          '<button type="button" class="btn secondary block" data-action="export-data">Exportar JSON</button>' +
+          '<button type="button" class="btn secondary block" data-action="trigger-import">Importar JSON</button>' +
+          '<input type="file" id="importFile" accept="application/json,.json" class="hidden">' +
+          '<button type="button" class="btn danger block" data-action="reset-data">Restablecer datos</button>' +
+        '</div>' +
+      '</div>' +
+
+    '<p id="settingsStatus" class="text-sm muted mt-2" aria-live="polite"></p>'
+  );
+}
+
+// phaseSelector() → HTML string for the phase-selection modal (overlay +
+// panel), one clickable card per PROTOCOLS entry (Anabolismo, Retatrutida,
+// Purga). Appended to document.body (outside #root) by openPhaseSelector(),
+// mirroring mealBuilderModal()/peptideModal()'s pattern from Tasks 4/5:
+// modals live outside #root so a render() elsewhere can't wipe them
+// mid-interaction, so their controls use inline onclick rather than
+// #root's data-action delegation.
+function phaseSelector() {
+  const cards = Object.keys(PROTOCOLS).map(function (key) {
+    const p = PROTOCOLS[key];
+    const isActive = state.selectedPhase === key;
+    return '' +
+      '<button type="button" class="card phase-card' + (isActive ? ' active' : '') + '" onclick="setPhase(\'' + esc(key) + '\')">' +
+        '<div class="card-header">' +
+          '<h3>' + esc(key) + '</h3>' +
+          (isActive ? '<span class="badge primary">Actual</span>' : '') +
+        '</div>' +
+        '<p class="muted text-sm mb-3">' + esc(p.description) + '</p>' +
+        '<div class="macro-preview">' +
+          '<div><div class="macro-value">' + n(p.targets.protein) + 'g</div><div class="macro-label">Prot</div></div>' +
+          '<div><div class="macro-value">' + n(p.targets.carbs) + 'g</div><div class="macro-label">Carb</div></div>' +
+          '<div><div class="macro-value">' + n(p.targets.fat) + 'g</div><div class="macro-label">Grasa</div></div>' +
+          '<div><div class="macro-value">' + n(p.targets.calories) + '</div><div class="macro-label">Kcal</div></div>' +
+        '</div>' +
+      '</button>';
+  }).join('');
+
+  return '' +
+    '<div class="modal-overlay" id="phaseModalOverlay" onclick="if(event.target===this) closePhaseSelector()">' +
+      '<div class="modal active" id="phaseModal" role="dialog" aria-modal="true" aria-labelledby="phaseModalTitle">' +
+        '<div class="modal-header">' +
+          '<h2 id="phaseModalTitle">Seleccionar fase</h2>' +
+          '<button type="button" class="modal-close" onclick="closePhaseSelector()" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' + cards + '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// openPhaseSelector() → inserts phaseSelector() into the DOM. Called from
+// showSettings()'s "Cambiar fase" button via data-action delegation.
+function openPhaseSelector() {
+  closePhaseSelector(); // remove any stale instance first
+  document.body.insertAdjacentHTML('beforeend', phaseSelector());
+}
+
+// closePhaseSelector() → removes the phase modal overlay from the DOM, if present.
+function closePhaseSelector() {
+  const overlay = document.getElementById('phaseModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// setPhase(phaseId) → switches state.selectedPhase and re-derives
+// state.macroTargets from PROTOCOLS[phaseId]'s defaults, persists, closes
+// the phase modal, and re-renders (updates the header subtitle too).
+function setPhase(phaseId) {
+  if (!PROTOCOLS[phaseId]) return;
+  state.selectedPhase = phaseId;
+  state.macroTargets = Object.assign({}, PROTOCOLS[phaseId].targets);
+  save();
+  closePhaseSelector();
+  render();
+}
+
+// handleTargetSubmit(e) → reads the four macro-target inputs, writes them
+// to state.macroTargets (decoupled from the selected phase's defaults — the
+// user can hand-tune targets without switching phase), persists, re-renders.
+function handleTargetSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const protein = n(document.getElementById('targetProtein').value);
+  const carbs = n(document.getElementById('targetCarbs').value);
+  const fat = n(document.getElementById('targetFat').value);
+  const calories = n(document.getElementById('targetCalories').value);
+  state.macroTargets = { protein: protein, carbs: carbs, fat: fat, calories: calories };
+  save();
+  render();
+  showSettingsStatus('Objetivos guardados.');
+}
+
+// exportData() → serializes the full app state to a downloadable JSON file
+// (rb-tracker-v6-YYYY-MM-DD.json), compatible with importData() below.
+function exportData() {
+  try {
+    const payload = JSON.stringify(state, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rb-tracker-v6-' + today() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    showSettingsStatus('Datos exportados.');
+  } catch (err) {
+    console.error('[tracker-v6] exportData() failed', err);
+    showSettingsStatus('Error al exportar.');
+  }
+}
+
+// handleImportFile(e) → reads the selected file as text, parses it as JSON,
+// and hands it to importData(). Guards against invalid/corrupt files.
+function handleImportFile(e) {
+  const input = e.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const parsed = JSON.parse(reader.result);
+      importData(parsed);
+    } catch (err) {
+      console.error('[tracker-v6] handleImportFile() parse failed', err);
+      showSettingsStatus('Archivo JSON inválido.');
+    }
+    input.value = '';
+  };
+  reader.onerror = function () {
+    showSettingsStatus('No se pudo leer el archivo.');
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// importData(parsed) → merges a previously-exported (or v5.4-compatible)
+// JSON payload into state: records, selectedPhase, and macroTargets are
+// adopted when present and valid; anything missing/invalid falls back to
+// the current in-memory state rather than being wiped. Persists and
+// re-renders on success.
+function importData(parsed) {
+  if (!parsed || typeof parsed !== 'object') {
+    showSettingsStatus('Archivo JSON inválido.');
+    return;
+  }
+  state = {
+    version: 6,
+    protocols: PROTOCOLS,
+    records: (parsed.records && typeof parsed.records === 'object') ? parsed.records : state.records,
+    selectedPhase: (parsed.selectedPhase && PROTOCOLS[parsed.selectedPhase]) ? parsed.selectedPhase : state.selectedPhase,
+    macroTargets: (parsed.macroTargets && typeof parsed.macroTargets === 'object') ? parsed.macroTargets : state.macroTargets
+  };
+  save();
+  render();
+  showSettingsStatus('Datos importados correctamente.');
+}
+
+// handleResetClick() → confirmation gate in front of resetData(), so a
+// stray tap can't wipe all logged data.
+function handleResetClick() {
+  const ok = window.confirm('¿Restablecer todos los datos? Esta acción no se puede deshacer.');
+  if (!ok) return;
+  resetData();
+}
+
+// resetData() → clears the persisted v6 state from localStorage and resets
+// the in-memory state back to its Task-1 defaults (Anabolismo phase, empty
+// records), then re-renders.
+function resetData() {
+  try {
+    localStorage.removeItem('rb_tracker_v6');
+  } catch (err) {
+    console.error('[tracker-v6] resetData() failed clearing storage', err);
+  }
+  state = {
+    version: 6,
+    protocols: PROTOCOLS,
+    records: {},
+    selectedPhase: 'Anabolismo',
+    macroTargets: Object.assign({}, PROTOCOLS.Anabolismo.targets)
+  };
+  save();
+  render();
+  showSettingsStatus('Datos restablecidos.');
+}
+
+// showSettingsStatus(msg) → writes a short status message into the
+// settings view's aria-live region (confirms save/export/import/reset).
+function showSettingsStatus(msg) {
+  const el = document.getElementById('settingsStatus');
+  if (el) el.textContent = msg;
+}
+
+// ==========================================================================
+// MAIN RENDER LOOP & EVENT HANDLERS (Task 8)
+// Consumes: dashboard(), analyticsView(), showSettings() (above), rec(),
+//           totals(), esc(), n(), today(), load()/save() persistence.
+// Produces: render(), switchView(view), shiftDate(days),
+//           attachEventListeners(), toggleTheme(), app initialization.
+// ==========================================================================
+
+// currentView / currentDate — transient UI state (which tab + which day
+// are being viewed). Deliberately kept separate from `state` (the
+// persisted data model): navigating tabs or days should never itself
+// dirty localStorage.
+let currentView = 'home';
+let currentDate = today();
+
+// load() → read persisted state from localStorage (rb_tracker_v6),
+// merging it onto the in-code defaults so a save from an earlier version
+// (or a partially-written one) can't leave required keys missing.
+// `protocols` is always taken fresh from the live PROTOCOLS constant
+// rather than whatever was serialized, so a code update to protocol
+// targets isn't shadowed by a stale saved copy.
+function load() {
+  const defaults = {
+    version: 6,
+    protocols: PROTOCOLS,
+    records: {},
+    selectedPhase: 'Anabolismo',
+    macroTargets: PROTOCOLS.Anabolismo.targets
+  };
+  try {
+    const raw = localStorage.getItem('rb_tracker_v6');
+    if (!raw) return defaults;
+    const saved = JSON.parse(raw) || {};
+    return {
+      version: 6,
+      protocols: PROTOCOLS,
+      records: saved.records || {},
+      selectedPhase: saved.selectedPhase || 'Anabolismo',
+      macroTargets: saved.macroTargets || PROTOCOLS.Anabolismo.targets
+    };
+  } catch (e) {
+    console.error('[tracker-v6] load() failed, using defaults', e);
+    return defaults;
+  }
+}
+
+// tabButton(view, icon, label) → one bottom-nav button. Internal helper
+// for render(); marks itself .active when it matches currentView.
+function tabButton(view, icon, label) {
+  const active = currentView === view ? ' active' : '';
+  return '<button type="button" class="tab-btn' + active + '" data-action="switch-view" data-view="' + view + '">' +
+      '<span class="tab-icon">' + icon + '</span><span>' + esc(label) + '</span>' +
+    '</button>';
+}
+
+// render() → the full app shell: header (title, phase subtitle, prev/next
+// date buttons + date input, theme toggle) + the active view's content in
+// <main> + the bottom tab bar. Replaces #root's innerHTML on every call;
+// #root itself is never replaced, which is what lets the single delegated
+// listener set up in attachEventListeners() keep working after every
+// re-render without being reattached.
+function render() {
+  const root = document.getElementById('root');
+  if (!root) return;
+
+  const theme = document.documentElement.getAttribute('data-theme') ||
+    (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const themeIcon = theme === 'dark' ? '☀️' : '🌙';
+
+  const views = { home: dashboard, analytics: analyticsView, settings: showSettings };
+  const viewFn = views[currentView] || dashboard;
+  const viewHtml = viewFn();
+
+  root.innerHTML =
+    '<header>' +
+        '<button type="button" class="theme-toggle" data-action="toggle-theme" aria-label="Cambiar tema">' + themeIcon + '</button>' +
+        '<h1>Tracker v6.0</h1>' +
+        '<div class="subtitle">' + esc(state.selectedPhase) + '</div>' +
+        '<div class="controls">' +
+          '<button type="button" data-action="shift-date" data-days="-1" aria-label="Día anterior">&#9664;</button>' +
+          '<input type="date" id="dateInput" value="' + esc(currentDate) + '">' +
+          '<button type="button" data-action="shift-date" data-days="1" aria-label="Día siguiente">&#9654;</button>' +
+        '</div>' +
+      '</header>' +
+    '<main>' + viewHtml + '</main>' +
+    '<nav id="tabs">' +
+        tabButton('home', '🏠', 'Inicio') +
+        tabButton('analytics', '📊', 'Analítica') +
+        tabButton('settings', '⚙️', 'Ajustes') +
+      '</nav>';
+}
+
+// switchView(view) → change the active tab ('home' | 'analytics' |
+// 'settings') and re-render. Unrecognized values fall back to 'home'
+// rather than rendering a blank view.
+function switchView(view) {
+  currentView = (view === 'analytics' || view === 'settings') ? view : 'home';
+  render();
+}
+
+// shiftDate(days) → move currentDate by `days` (e.g. -1/+1 for the
+// header's prev/next buttons) and re-render. Uses the same
+// local-timezone-safe date math as today() so the displayed date never
+// drifts near midnight.
+function shiftDate(days) {
+  const d = new Date(currentDate + 'T00:00:00');
+  d.setDate(d.getDate() + n(days));
+  const localMs = d.getTime() - d.getTimezoneOffset() * 60000;
+  currentDate = new Date(localMs).toISOString().slice(0, 10);
+  render();
+}
+
+// toggleTheme() → flip the explicit data-theme override on <html> between
+// 'light' and 'dark' (absence of the attribute means "follow system
+// preference", per the CSS at the top of the <style> block), persist the
+// choice separately from app data, and re-render so the header icon and
+// all `:root[data-theme]` CSS updates.
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const isDark = current
+    ? current === 'dark'
+    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('rb_tracker_v6_theme', next); } catch (e) {}
+  render();
+}
+
+// applyStoredTheme() → restore a previously-toggled theme preference (if
+// any) before the first render, so a reload doesn't flash back to the
+// system default after the user explicitly chose light/dark.
+function applyStoredTheme() {
+  try {
+    const saved = localStorage.getItem('rb_tracker_v6_theme');
+    if (saved === 'dark' || saved === 'light') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+  } catch (e) {}
+}
+
+// attachEventListeners() → wire up all interactive behavior via event
+// delegation on the persistent #root element, so ONE call at startup
+// keeps working across every future render() (which only ever replaces
+// #root's children, never #root itself). Handles: bottom-tab clicks
+// (switch-view), prev/next date buttons (shift-date), the theme toggle,
+// and the date <input>'s change event.
+function attachEventListeners() {
+  const root = document.getElementById('root');
+  if (!root) return;
+
+  root.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    if (action === 'switch-view') {
+      switchView(btn.getAttribute('data-view'));
+    } else if (action === 'shift-date') {
+      shiftDate(n(btn.getAttribute('data-days')));
+    } else if (action === 'toggle-theme') {
+      toggleTheme();
+    } else if (action === 'open-phase-selector') {
+      openPhaseSelector();
+    } else if (action === 'export-data') {
+      exportData();
+    } else if (action === 'trigger-import') {
+      const importInput = document.getElementById('importFile');
+      if (importInput) importInput.click();
+    } else if (action === 'reset-data') {
+      handleResetClick();
+    }
+  });
+
+  root.addEventListener('submit', function (e) {
+    if (e.target && e.target.id === 'targetForm') {
+      handleTargetSubmit(e);
+    }
+  });
+
+  root.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'dateInput') {
+      currentDate = e.target.value || today();
+      render();
+    } else if (e.target && e.target.id === 'importFile') {
+      handleImportFile(e);
+    }
+  });
+}
+
+// --------------------------------------------------------------------------
+// PEPTIDE MODAL (Task 5)
+// Consumes: PEPTIDES_DB, PROTOCOLS (via state.selectedPhase), rec(), save(), esc(), n(), today()
+// Produces: peptideModal(), closePeptide(), handlePeptideSubmit(e)
+// Glue (not in the task's named-function list, mirrors Task 4's pattern so
+// this task is testable end-to-end ahead of Task 6/8 wiring it up):
+// openPeptideModal(), attachPeptideModalListeners(), renderPeptideHint(),
+// last5Peptides(), freqLabel(), uid()
+// --------------------------------------------------------------------------
+
+// uid() → short unique id for peptide-injection log entries. Not
+// cryptographically unique, just collision-safe enough for a personal
+// tracker's localStorage records.
+function uid() {
+  return 'pep_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+// freqLabel(freq) → human-readable (Spanish) label for a PEPTIDES_DB
+// default_frequency code, used in the protocol hint.
+const FREQ_LABELS = {
+  on_demand: 'A demanda',
+  daily: 'Diario',
+  '3x_week': '3x / semana',
+  '2x_week': '2x / semana',
+  weekly: 'Semanal',
+  weekdays_only: 'Lun–Vie'
+};
+function freqLabel(freq) {
+  return FREQ_LABELS[freq] || freq || '—';
+}
+
+// last5Peptides() → flatten peptide-injection entries from every day in
+// state.records, newest first by date+time, capped to 5. Backs the
+// "Historial" section inside peptideModal().
+function last5Peptides() {
+  const all = [];
+  Object.keys(state.records).forEach(function (date) {
+    (state.records[date].peptides || []).forEach(function (p) { all.push(p); });
+  });
+  all.sort(function (a, b) {
+    const ka = (a.date || '') + ' ' + (a.time || '');
+    const kb = (b.date || '') + ' ' + (b.time || '');
+    return kb.localeCompare(ka);
+  });
+  return all.slice(0, 5);
+}
+
+// peptideModal() → HTML string for the full modal (overlay + panel):
+// peptide <select> grouped Núcleo/Opcionales (21 PEPTIDES_DB entries), dose
+// + time inputs, a protocol-hint slot (filled by renderPeptideHint() on
+// change), and the last-5-injections historial.
+function peptideModal() {
+  const optionHtml = function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.nombre) + '</option>'; };
+  const coreOptions = PEPTIDES_DB.filter(function (p) { return p.tier === 'core'; }).map(optionHtml).join('');
+  const optionalOptions = PEPTIDES_DB.filter(function (p) { return p.tier === 'optional'; }).map(optionHtml).join('');
+
+  const historial = last5Peptides();
+  const historialHtml = historial.length ? historial.map(function (h) {
+    return '' +
+      '<div class="list-item">' +
+        '<div class="item-main">' +
+          '<div class="item-title">' + esc(h.nombre) + '</div>' +
+          '<div class="item-sub">' + esc(h.date) + ' · ' + esc(h.time || '') + '</div>' +
+        '</div>' +
+        '<div class="item-meta">' + n(h.dose) + ' u.</div>' +
+      '</div>';
+  }).join('') : '<div class="empty-state"><div class="empty-icon">💉</div>Sin inyecciones registradas todavía</div>';
+
+  return '' +
+    '<div class="modal-overlay" id="peptideModalOverlay" onclick="if(event.target===this) closePeptide()">' +
+      '<div class="modal active" id="peptideModal" role="dialog" aria-modal="true" aria-labelledby="peptideModalTitle">' +
+        '<div class="modal-header">' +
+          '<h2 id="peptideModalTitle">Registrar inyección</h2>' +
+          '<button type="button" class="modal-close" onclick="closePeptide()" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<form id="peptideForm">' +
+            '<div class="form-group">' +
+              '<label for="peptideSelect">Péptido</label>' +
+              '<select id="peptideSelect" required>' +
+                '<option value="" disabled selected>Selecciona un péptido…</option>' +
+                '<optgroup label="Núcleo">' + coreOptions + '</optgroup>' +
+                '<optgroup label="Opcionales">' + optionalOptions + '</optgroup>' +
+              '</select>' +
+            '</div>' +
+            '<div id="peptideHint"></div>' +
+            '<div class="form-row">' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="peptideDose">Dosis</label>' +
+                '<div class="input-group">' +
+                  '<input type="number" id="peptideDose" inputmode="decimal" min="0" step="0.5" required>' +
+                  '<span class="input-suffix">u.</span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="peptideTime">Hora</label>' +
+                '<input type="time" id="peptideTime" required>' +
+              '</div>' +
+            '</div>' +
+            '<h3 class="mt-4 mb-2">Últimas 5 inyecciones</h3>' +
+            '<div id="peptideHistorial">' + historialHtml + '</div>' +
+          '</form>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button type="button" class="btn secondary" onclick="closePeptide()">Cancelar</button>' +
+          '<button type="submit" form="peptideForm" class="btn">Guardar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// openPeptideModal() → inserts peptideModal() into the DOM, defaults the
+// time input to "now", and wires its listeners. Kept here (mirroring
+// openMealModal() from Task 4) so this task is testable end-to-end ahead of
+// Task 6's quick-action buttons calling it directly.
+function openPeptideModal() {
+  closePeptide(); // remove any stale instance first
+  document.body.insertAdjacentHTML('beforeend', peptideModal());
+  const timeInput = document.getElementById('peptideTime');
+  if (timeInput) {
+    const now = new Date();
+    timeInput.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  }
+  attachPeptideModalListeners();
+}
+
+// attachPeptideModalListeners() → form submit + peptide-select change
+// (renders the protocol hint and auto-fills the suggested dose).
+function attachPeptideModalListeners() {
+  const form = document.getElementById('peptideForm');
+  const select = document.getElementById('peptideSelect');
+  if (form) form.addEventListener('submit', handlePeptideSubmit);
+  if (select) {
+    select.addEventListener('change', function () {
+      renderPeptideHint(select.value);
+      const pep = PEPTIDES_DB.find(function (p) { return p.id === select.value; });
+      const doseInput = document.getElementById('peptideDose');
+      if (pep && pep.default_dose != null && doseInput && !doseInput.value) {
+        doseInput.value = pep.default_dose;
+      }
+    });
+  }
+}
+
+// renderPeptideHint(peptideId) → fills #peptideHint with the selected
+// peptide's suggested dose/frequency/notes plus a badge for the currently
+// active protocol phase (state.selectedPhase / PROTOCOLS), tying
+// PEPTIDES_DB data back to the phase the user is actually running.
+function renderPeptideHint(peptideId) {
+  const hintEl = document.getElementById('peptideHint');
+  if (!hintEl) return;
+  const pep = PEPTIDES_DB.find(function (p) { return p.id === peptideId; });
+  if (!pep) { hintEl.innerHTML = ''; return; }
+  const phase = state.selectedPhase;
+  const phaseInfo = PROTOCOLS[phase];
+  hintEl.innerHTML = '' +
+    '<div class="banner info mt-2 mb-3">' +
+      '<strong>' + esc(pep.nombre) + '</strong><br>' +
+      'Dosis sugerida: ' + (pep.default_dose != null ? pep.default_dose + ' u.' : 'variable') +
+      ' · Frecuencia: ' + esc(freqLabel(pep.default_frequency)) + '<br>' +
+      '<span class="muted">' + esc(pep.notes) + '</span><br>' +
+      '<span class="badge primary mt-2">Fase actual: ' + esc(phase) + '</span> ' +
+      '<span class="faint">' + esc(phaseInfo ? phaseInfo.description : '') + '</span>' +
+    '</div>';
+}
+
+// closePeptide() → removes the peptide modal overlay from the DOM, if present.
+function closePeptide() {
+  const overlay = document.getElementById('peptideModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// handlePeptideSubmit(e) → validates the form, pushes a new injection entry
+// into today's rec().peptides, persists via save(), closes the modal, and
+// re-renders if the main render loop (Task 8) exists.
+function handlePeptideSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const select = document.getElementById('peptideSelect');
+  const doseInput = document.getElementById('peptideDose');
+  const timeInput = document.getElementById('peptideTime');
+  const pep = PEPTIDES_DB.find(function (p) { return p.id === (select ? select.value : ''); });
+  if (!pep || !doseInput || !doseInput.value) return;
+
+  const logDate = typeof currentDate !== 'undefined' ? currentDate : today();
+  const entry = {
+    id: uid(),
+    peptideId: pep.id,
+    nombre: pep.nombre,
+    dose: n(doseInput.value),
+    time: timeInput ? timeInput.value : '',
+    date: logDate
+  };
+  rec(logDate).peptides.push(entry);
+  save();
+  closePeptide();
+  if (typeof render === 'function') render();
+}
+
+// --------------------------------------------------------------------------
+// CHECK-IN MODAL (Task 5)
+// Consumes: rec(), save(), esc(), n()
+// Produces: checkinModal(), closeCheckin(), handleCheckinSubmit(e)
+// Glue: openCheckinModal(), attachCheckinModalListeners()
+// --------------------------------------------------------------------------
+
+const SLEEP_QUALITY_LABELS = { mala: 'Mala', regular: 'Regular', buena: 'Buena', excelente: 'Excelente' };
+
+// checkinModal() → HTML string for the daily check-in modal: water (L),
+// sleep hours + quality, weight (kg), and a free-text notes textarea,
+// pre-filled from the viewed day's rec().checkin if one already exists.
+function checkinModal() {
+  const c = rec(typeof currentDate !== 'undefined' ? currentDate : undefined).checkin || {};
+  const qualityOptions = Object.keys(SLEEP_QUALITY_LABELS).map(function (k) {
+    return '<option value="' + k + '"' + (c.sleepQuality === k ? ' selected' : '') + '>' + SLEEP_QUALITY_LABELS[k] + '</option>';
+  }).join('');
+
+  return '' +
+    '<div class="modal-overlay" id="checkinModalOverlay" onclick="if(event.target===this) closeCheckin()">' +
+      '<div class="modal active" id="checkinModal" role="dialog" aria-modal="true" aria-labelledby="checkinModalTitle">' +
+        '<div class="modal-header">' +
+          '<h2 id="checkinModalTitle">Check-in diario</h2>' +
+          '<button type="button" class="modal-close" onclick="closeCheckin()" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<form id="checkinForm">' +
+            '<div class="form-row">' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="checkinWater">Agua (L)</label>' +
+                '<input type="number" id="checkinWater" inputmode="decimal" min="0" step="0.1" value="' + (c.water != null ? c.water : '') + '">' +
+              '</div>' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="checkinWeight">Peso (kg)</label>' +
+                '<input type="number" id="checkinWeight" inputmode="decimal" min="0" step="0.1" value="' + (c.weight != null ? c.weight : '') + '">' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="checkinSleepHours">Sueño (horas)</label>' +
+                '<input type="number" id="checkinSleepHours" inputmode="decimal" min="0" max="24" step="0.5" value="' + (c.sleepHours != null ? c.sleepHours : '') + '">' +
+              '</div>' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label for="checkinSleepQuality">Calidad de sueño</label>' +
+                '<select id="checkinSleepQuality">' +
+                  '<option value="" disabled' + (c.sleepQuality ? '' : ' selected') + '>Selecciona…</option>' +
+                  qualityOptions +
+                '</select>' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label for="checkinNotes">Notas</label>' +
+              '<textarea id="checkinNotes" placeholder="Observaciones del día…">' + esc(c.notes || '') + '</textarea>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button type="button" class="btn secondary" onclick="closeCheckin()">Cancelar</button>' +
+          '<button type="submit" form="checkinForm" class="btn">Guardar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// openCheckinModal() → inserts checkinModal() into the DOM and wires its
+// listeners. Mirrors openMealModal()/openPeptideModal() so this task is
+// testable end-to-end ahead of Task 6's quick-action buttons.
+function openCheckinModal() {
+  closeCheckin(); // remove any stale instance first
+  document.body.insertAdjacentHTML('beforeend', checkinModal());
+  attachCheckinModalListeners();
+}
+
+// attachCheckinModalListeners() → wires the check-in form's submit handler.
+function attachCheckinModalListeners() {
+  const form = document.getElementById('checkinForm');
+  if (form) form.addEventListener('submit', handleCheckinSubmit);
+}
+
+// closeCheckin() → removes the check-in modal overlay from the DOM, if present.
+function closeCheckin() {
+  const overlay = document.getElementById('checkinModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// handleCheckinSubmit(e) → reads the form, persists a single checkin object
+// on the viewed day's record (overwriting any earlier check-in for the same
+// day), saves, closes the modal, and re-renders if the main render loop
+// (Task 8) exists.
+function handleCheckinSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const water = document.getElementById('checkinWater').value;
+  const weight = document.getElementById('checkinWeight').value;
+  const sleepHours = document.getElementById('checkinSleepHours').value;
+  const sleepQuality = document.getElementById('checkinSleepQuality').value;
+  const notes = document.getElementById('checkinNotes').value;
+
+  rec(typeof currentDate !== 'undefined' ? currentDate : undefined).checkin = {
+    water: water !== '' ? n(water) : null,
+    weight: weight !== '' ? n(weight) : null,
+    sleepHours: sleepHours !== '' ? n(sleepHours) : null,
+    sleepQuality: sleepQuality || null,
+    notes: notes || '',
+    savedAt: new Date().toISOString()
+  };
+  save();
+  closeCheckin();
+  if (typeof render === 'function') render();
+}
+
+// --------------------------------------------------------------------------
+// MIGRATION — v5→v6 legacy data recovery (Task 10, "Phase 1" / opción 2).
+// Implemented independently of the main render loop (Task 8): everything
+// here touches only `state`, `save()`, plain localStorage reads, and the
+// existing n()/uid() helpers, so it is fully testable standalone (e.g.
+// from a console) before dashboard/modals/analytics are renderable.
+// --------------------------------------------------------------------------
+
+// LEGACY_KEYS — every localStorage key a prior version of this tracker is
+// known to have used, newest-first, so a newer legacy version wins if more
+// than one happens to be present in the same browser.
+const LEGACY_KEYS = ['rb_tracker_v5', 'rb_tracker_v4', 'rb_tracker_v3', 'rb_tracker_v2', 'rb_tracker', 'rbTracker'];
+
+// migrateMeal(m) → adapt one legacy meal entry into the v6 meal shape
+// ({id, name, foodId, gramos, isCocido, prot, carb, fat, kcal,
+// timestamp}). Legacy trackers (v5 and older) logged meals as free-typed
+// {name, calories, protein, carbs, fat} with no FOOD_DB/gramos concept, so
+// foodId/gramos/isCocido have no legacy source and default to null/0/false;
+// name and the four macro fields are what actually carries over (accepting
+// either the legacy calories/protein/carbs names or v6's kcal/prot/carb,
+// in case a mixed-version record is ever encountered).
+function migrateMeal(m) {
+  if (!m || typeof m !== 'object') return null;
+  return {
+    id: m.id || ('m_migrated_' + Math.random().toString(36).slice(2, 10)),
+    name: m.name || m.label || 'Comida migrada',
+    foodId: m.foodId || null,
+    gramos: n(m.gramos != null ? m.gramos : m.grams),
+    isCocido: !!m.isCocido,
+    prot: n(m.prot != null ? m.prot : m.protein),
+    carb: n(m.carb != null ? m.carb : m.carbs),
+    fat: n(m.fat),
+    kcal: n(m.kcal != null ? m.kcal : m.calories),
+    timestamp: m.timestamp || null
+  };
+}
+
+// migratePeptide(p, date) → adapt one legacy peptide entry (v5 shape:
+// {id, label, mechanism, dosage_protocol, dosage_applied, status,
+// timestamp}) into a v6 injection-log entry ({id, peptideId, nombre,
+// dose, time, date}). Legacy peptides were a per-day status toggle
+// covering the whole protocol roster (pending/done/skipped for every
+// peptide, every day), not a log of actual injections — so only
+// status === 'done' entries (a dose was actually applied) are carried
+// over; migrating 'pending'/'skipped' placeholders would flood v6's
+// injection historial with doses that were never given. Returns null for
+// anything else so callers can .filter(Boolean).
+function migratePeptide(p, date) {
+  if (!p || typeof p !== 'object' || p.status !== 'done') return null;
+  const ts = p.timestamp ? new Date(p.timestamp) : null;
+  const time = (ts && !isNaN(ts.getTime()))
+    ? String(ts.getHours()).padStart(2, '0') + ':' + String(ts.getMinutes()).padStart(2, '0')
+    : '';
+  return {
+    id: uid(),
+    peptideId: p.id || p.peptideId || '',
+    nombre: p.label || p.nombre || p.id || 'Péptido migrado',
+    dose: n(p.dosage_applied != null ? p.dosage_applied : p.dose),
+    time: time,
+    date: date
+  };
+}
+
+// migrateCheckin(legacyRec) → adapt legacy per-day hydration/sleep/weight/
+// recovery fields (spread across legacyRec.hydration, .sleep, .weight,
+// .recovery in v5) into a single v6 checkin object ({water, weight,
+// sleepHours, sleepQuality, notes, savedAt}). Returns null when none of
+// those fields actually carry data, so a day with nothing logged doesn't
+// get a synthetic empty checkin created for it.
+function migrateCheckin(legacyRec) {
+  const hydration = legacyRec.hydration || {};
+  const sleep = legacyRec.sleep || {};
+  const recovery = legacyRec.recovery || {};
+  const hasWater = hydration.liters != null && n(hydration.liters) > 0;
+  const hasWeight = legacyRec.weight != null;
+  const hasSleep = sleep.hours != null && n(sleep.hours) > 0;
+  if (!hasWater && !hasWeight && !hasSleep) return null;
+
+  const notes = [hydration.notes, sleep.notes, recovery.notes]
+    .filter(function (x) { return x; })
+    .join(' | ');
+
+  return {
+    water: hasWater ? n(hydration.liters) : null,
+    weight: hasWeight ? n(legacyRec.weight) : null,
+    sleepHours: hasSleep ? n(sleep.hours) : null,
+    sleepQuality: sleep.quality || null,
+    notes: notes,
+    savedAt: legacyRec.date ? legacyRec.date + 'T00:00:00.000Z' : new Date().toISOString()
+  };
+}
+
+// migrateFromV5() → one-shot recovery of any pre-v6 tracker data sitting in
+// this browser's localStorage. Scans LEGACY_KEYS in order and adapts the
+// FIRST key that parses to at least one usable record (so a present-but-
+// empty v5 key can't shadow real data sitting in an older v4/v3 key). For
+// every legacy record found: meals → migrateMeal() per entry, peptides →
+// migratePeptide() per entry (status==='done' only), checkin →
+// migrateCheckin() from that day's hydration/sleep/weight. Records are
+// merged into state.records keyed by date; a date already present in
+// state.records is never overwritten (defensive — the call site is only
+// meant to invoke this when state.records is empty). Persists via save()
+// when anything was migrated. Returns the number of days migrated (0 if no
+// legacy data was found, or the only legacy data found was already empty).
+function migrateFromV5() {
+  let sourceKey = null;
+  let sourceData = null;
+
+  for (let i = 0; i < LEGACY_KEYS.length; i++) {
+    const key = LEGACY_KEYS[i];
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const records = (parsed && parsed.records && typeof parsed.records === 'object') ? parsed.records : null;
+      if (records && Object.keys(records).length > 0) {
+        sourceKey = key;
+        sourceData = parsed;
+        break;
+      }
+    } catch (e) {
+      console.error('[tracker-v6] migrateFromV5: failed to parse legacy key "' + key + '"', e);
+    }
+  }
+
+  if (!sourceData) {
+    console.log('[tracker-v6] migrateFromV5: no legacy data found, nothing to migrate');
+    return 0;
+  }
+
+  let migratedDays = 0;
+  Object.keys(sourceData.records).forEach(function (date) {
+    const legacyRec = sourceData.records[date];
+    if (!legacyRec || typeof legacyRec !== 'object') return;
+    if (state.records[date]) return; // never clobber an existing v6 record
+
+    const meals = (legacyRec.meals || []).map(migrateMeal).filter(Boolean);
+    const peptides = (legacyRec.peptides || [])
+      .map(function (p) { return migratePeptide(p, date); })
+      .filter(Boolean);
+    const checkin = migrateCheckin(legacyRec);
+
+    state.records[date] = { date: date, meals: meals, peptides: peptides, checkin: checkin };
+    migratedDays++;
+  });
+
+  if (migratedDays > 0) {
+    save();
+    console.log('[tracker-v6] migrateFromV5: migrated ' + migratedDays + ' day(s) from "' + sourceKey + '"');
+  } else {
+    console.log('[tracker-v6] migrateFromV5: source "' + sourceKey + '" had no new days to migrate');
+  }
+  return migratedDays;
+}
+
+// --------------------------------------------------------------------------
+// INIT — bootstraps the app once the data layer + all views are defined.
+// --------------------------------------------------------------------------
+applyStoredTheme();
+state = load();
+if (Object.keys(state.records).length === 0) migrateFromV5();
+attachEventListeners();
+render();
 </script>
 </body>
 </html>
