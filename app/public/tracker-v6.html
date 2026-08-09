@@ -70,32 +70,123 @@ const PEPTIDES_DB = [
 ];
 
 // --------------------------------------------------------------------------
-// FOOD_DB — 34 foods with exact macros per 100g (crudo & cocido).
-// BLOCKED: source file `alimentos_crudo_cocido_macros.json` referenced in
-// task-1-brief.md was not found anywhere in this repo, its git history, or
-// this machine's filesystem (searched Developer/, home dir, Desktop,
-// Downloads, Documents, iCloud Drive). It was not fabricated here — inventing
-// "exact" crudo/cocido macro values for a database that feeds real macro
-// targets tied to a medical protocol (Retatrutida titration, 1800kcal Purga
-// floor) is a data-integrity risk, not a formatting detail. See
-// task-1-report.md for what's needed to unblock this.
-// Expected shape once supplied:
-//   {id, nombre, categoria, factor_cocido_sobre_crudo,
-//    crudo_100g:{kcal,prot,carb,grasa}, cocido_100g:{kcal,prot,carb,grasa}}
+// FOOD_DB — 32 foods with exact macros per 100g (crudo & cocido).
+// Source: docs/superpowers/data/alimentos_crudo_cocido_macros.json
+// (transcribed verbatim; note the source file contains 32 entries, not the
+// 34 mentioned in task-1-brief.md — see task-1-report.md)
+// Shape: {id, nombre, categoria, metodo_coccion, factor_cocido_sobre_crudo,
+//         crudo_100g:{kcal,prot,carb,grasa}, cocido_100g:{kcal,prot,carb,grasa},
+//         notas}
 // --------------------------------------------------------------------------
-const FOOD_DB = [];
+const FOOD_DB = [
+  { id: 'pollo_pechuga', nombre: 'Pollo pechuga', categoria: 'Proteina', metodo_coccion: 'plancha/hervido', factor_cocido_sobre_crudo: 0.7, crudo_100g: { kcal: 110, prot: 23.0, carb: 0.0, grasa: 1.5 }, cocido_100g: { kcal: 157.1, prot: 32.9, carb: 0.0, grasa: 2.1 }, notas: 'Pierde ~30% agua a la plancha' },
+  { id: 'res_magra', nombre: 'Carne de res magra', categoria: 'Proteina', metodo_coccion: 'plancha', factor_cocido_sobre_crudo: 0.75, crudo_100g: { kcal: 160, prot: 21.0, carb: 0.0, grasa: 8.0 }, cocido_100g: { kcal: 213.3, prot: 28.0, carb: 0.0, grasa: 10.7 }, notas: 'Nalga/lomo magro' },
+  { id: 'salmon', nombre: 'Salmón', categoria: 'Proteina', metodo_coccion: 'horno/plancha', factor_cocido_sobre_crudo: 0.8, crudo_100g: { kcal: 208, prot: 20.0, carb: 0.0, grasa: 13.0 }, cocido_100g: { kcal: 260.0, prot: 25.0, carb: 0.0, grasa: 16.2 }, notas: 'Rico en omega-3' },
+  { id: 'atun_fresco', nombre: 'Atún fresco', categoria: 'Proteina', metodo_coccion: 'plancha', factor_cocido_sobre_crudo: 0.75, crudo_100g: { kcal: 108, prot: 23.0, carb: 0.0, grasa: 1.0 }, cocido_100g: { kcal: 144.0, prot: 30.7, carb: 0.0, grasa: 1.3 }, notas: 'Enlatado al agua: ~116kcal/26prot' },
+  { id: 'huevo', nombre: 'Huevo entero', categoria: 'Proteina', metodo_coccion: 'hervido/revuelto', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 143, prot: 12.6, carb: 0.7, grasa: 9.5 }, cocido_100g: { kcal: 143.0, prot: 12.6, carb: 0.7, grasa: 9.5 }, notas: '1 huevo ~50 g' },
+  { id: 'clara_huevo', nombre: 'Clara de huevo', categoria: 'Proteina', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 52, prot: 11.0, carb: 0.7, grasa: 0.2 }, cocido_100g: { kcal: 52.0, prot: 11.0, carb: 0.7, grasa: 0.2 }, notas: '1 clara ~33 g' },
+  { id: 'jamon_magro', nombre: 'Jamón magro', categoria: 'Proteina', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 120, prot: 18.0, carb: 1.0, grasa: 5.0 }, cocido_100g: { kcal: 120.0, prot: 18.0, carb: 1.0, grasa: 5.0 }, notas: 'Cocido, bajo en grasa' },
+  { id: 'yogur_griego', nombre: 'Yogur griego natural', categoria: 'Lacteo', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 73, prot: 9.0, carb: 4.0, grasa: 2.0 }, cocido_100g: { kcal: 73.0, prot: 9.0, carb: 4.0, grasa: 2.0 }, notas: '2% grasa; descremado ~10 prot' },
+  { id: 'leche_entera', nombre: 'Leche entera', categoria: 'Lacteo', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 62, prot: 3.3, carb: 4.8, grasa: 3.6 }, cocido_100g: { kcal: 62.0, prot: 3.3, carb: 4.8, grasa: 3.6 }, notas: 'Descremada: ~35kcal/0.1 grasa' },
+  { id: 'whey', nombre: 'Proteína whey (polvo)', categoria: 'Suplemento', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 400, prot: 80.0, carb: 8.0, grasa: 6.0 }, cocido_100g: { kcal: 400.0, prot: 80.0, carb: 8.0, grasa: 6.0 }, notas: '1 scoop ~30 g = 24 g prot' },
+  { id: 'caseina', nombre: 'Caseína (polvo)', categoria: 'Suplemento', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 370, prot: 80.0, carb: 5.0, grasa: 3.0 }, cocido_100g: { kcal: 370.0, prot: 80.0, carb: 5.0, grasa: 3.0 }, notas: 'Liberación lenta, nocturna' },
+  { id: 'colageno', nombre: 'Colágeno péptidos (polvo)', categoria: 'Suplemento', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 360, prot: 90.0, carb: 0.0, grasa: 0.0 }, cocido_100g: { kcal: 360.0, prot: 90.0, carb: 0.0, grasa: 0.0 }, notas: 'Proteína incompleta; con vit C' },
+  { id: 'lentejas', nombre: 'Lentejas', categoria: 'Carbo/Proteina', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.5, crudo_100g: { kcal: 350, prot: 25.0, carb: 60.0, grasa: 1.0 }, cocido_100g: { kcal: 140.0, prot: 10.0, carb: 24.0, grasa: 0.4 }, notas: 'Peso en seco' },
+  { id: 'garbanzos', nombre: 'Garbanzos', categoria: 'Carbo/Proteina', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.4, crudo_100g: { kcal: 364, prot: 19.0, carb: 61.0, grasa: 6.0 }, cocido_100g: { kcal: 151.7, prot: 7.9, carb: 25.4, grasa: 2.5 }, notas: 'Peso en seco' },
+  { id: 'arroz_integral', nombre: 'Arroz integral', categoria: 'Carbo', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.6, crudo_100g: { kcal: 360, prot: 7.5, carb: 76.0, grasa: 2.7 }, cocido_100g: { kcal: 138.5, prot: 2.9, carb: 29.2, grasa: 1.0 }, notas: 'Peso en seco' },
+  { id: 'arroz_blanco', nombre: 'Arroz blanco', categoria: 'Carbo', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.6, crudo_100g: { kcal: 360, prot: 7.0, carb: 78.0, grasa: 0.6 }, cocido_100g: { kcal: 138.5, prot: 2.7, carb: 30.0, grasa: 0.2 }, notas: 'Peso en seco' },
+  { id: 'avena', nombre: 'Avena', categoria: 'Carbo', metodo_coccion: 'cruda/cocida', factor_cocido_sobre_crudo: 2.5, crudo_100g: { kcal: 380, prot: 13.0, carb: 67.0, grasa: 7.0 }, cocido_100g: { kcal: 152.0, prot: 5.2, carb: 26.8, grasa: 2.8 }, notas: 'Peso en seco' },
+  { id: 'quinoa', nombre: 'Quinoa', categoria: 'Carbo', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.7, crudo_100g: { kcal: 368, prot: 14.0, carb: 64.0, grasa: 6.0 }, cocido_100g: { kcal: 136.3, prot: 5.2, carb: 23.7, grasa: 2.2 }, notas: 'Peso en seco' },
+  { id: 'batata', nombre: 'Batata (camote)', categoria: 'Carbo', metodo_coccion: 'horno', factor_cocido_sobre_crudo: 0.9, crudo_100g: { kcal: 86, prot: 1.6, carb: 20.0, grasa: 0.1 }, cocido_100g: { kcal: 95.6, prot: 1.8, carb: 22.2, grasa: 0.1 }, notas: 'Asada pierde agua' },
+  { id: 'papa', nombre: 'Papa', categoria: 'Carbo', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 0.98, crudo_100g: { kcal: 77, prot: 2.0, carb: 17.0, grasa: 0.1 }, cocido_100g: { kcal: 78.6, prot: 2.0, carb: 17.3, grasa: 0.1 }, notas: 'Hervida ~igual peso' },
+  { id: 'banana', nombre: 'Banana', categoria: 'Fruta', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 89, prot: 1.1, carb: 23.0, grasa: 0.3 }, cocido_100g: { kcal: 89.0, prot: 1.1, carb: 23.0, grasa: 0.3 }, notas: '1 mediana ~100 g' },
+  { id: 'manzana', nombre: 'Manzana', categoria: 'Fruta', metodo_coccion: 'cruda/asada', factor_cocido_sobre_crudo: 0.85, crudo_100g: { kcal: 52, prot: 0.3, carb: 14.0, grasa: 0.2 }, cocido_100g: { kcal: 61.2, prot: 0.4, carb: 16.5, grasa: 0.2 }, notas: 'Asada concentra' },
+  { id: 'frutos_rojos', nombre: 'Frutos rojos', categoria: 'Fruta', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 45, prot: 1.0, carb: 10.0, grasa: 0.3 }, cocido_100g: { kcal: 45.0, prot: 1.0, carb: 10.0, grasa: 0.3 }, notas: 'Bajo índice glucémico' },
+  { id: 'brocoli', nombre: 'Brócoli', categoria: 'Vegetal', metodo_coccion: 'vapor', factor_cocido_sobre_crudo: 0.9, crudo_100g: { kcal: 34, prot: 2.8, carb: 7.0, grasa: 0.4 }, cocido_100g: { kcal: 37.8, prot: 3.1, carb: 7.8, grasa: 0.4 }, notas: 'Peso en crudo' },
+  { id: 'coliflor', nombre: 'Coliflor', categoria: 'Vegetal', metodo_coccion: 'vapor', factor_cocido_sobre_crudo: 0.9, crudo_100g: { kcal: 25, prot: 1.9, carb: 5.0, grasa: 0.3 }, cocido_100g: { kcal: 27.8, prot: 2.1, carb: 5.6, grasa: 0.3 }, notas: 'Peso en crudo' },
+  { id: 'ensalada_verde', nombre: 'Ensalada verde (hojas)', categoria: 'Vegetal', metodo_coccion: 'cruda', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 17, prot: 1.4, carb: 2.9, grasa: 0.2 }, cocido_100g: { kcal: 17.0, prot: 1.4, carb: 2.9, grasa: 0.2 }, notas: 'Lechuga/rúcula/espinaca' },
+  { id: 'aguacate', nombre: 'Aguacate (palta)', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 160, prot: 2.0, carb: 9.0, grasa: 15.0 }, cocido_100g: { kcal: 160.0, prot: 2.0, carb: 9.0, grasa: 15.0 }, notas: 'Fibra ~7 g/100 g' },
+  { id: 'aceite_oliva', nombre: 'Aceite de oliva extra virgen', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 884, prot: 0.0, carb: 0.0, grasa: 100.0 }, cocido_100g: { kcal: 884.0, prot: 0.0, carb: 0.0, grasa: 100.0 }, notas: '1 cda ~13.5 g = 120 kcal' },
+  { id: 'nueces', nombre: 'Nueces', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 654, prot: 15.0, carb: 14.0, grasa: 65.0 }, cocido_100g: { kcal: 654.0, prot: 15.0, carb: 14.0, grasa: 65.0 }, notas: 'Omega-3 vegetal' },
+  { id: 'mct_oil', nombre: 'MCT oil C8', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 830, prot: 0.0, carb: 0.0, grasa: 100.0 }, cocido_100g: { kcal: 830.0, prot: 0.0, carb: 0.0, grasa: 100.0 }, notas: 'Para ayuno limpio en el espresso' },
+  { id: 'cacao', nombre: 'Cacao puro en polvo', categoria: 'Otro', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 228, prot: 20.0, carb: 58.0, grasa: 14.0 }, cocido_100g: { kcal: 228.0, prot: 20.0, carb: 58.0, grasa: 14.0 }, notas: 'Sin azúcar; fibra alta' },
+  { id: 'chia', nombre: 'Semillas de chía', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 486, prot: 17.0, carb: 42.0, grasa: 31.0 }, cocido_100g: { kcal: 486.0, prot: 17.0, carb: 42.0, grasa: 31.0 }, notas: 'Fibra ~34 g/100 g' }
+];
 
 // --------------------------------------------------------------------------
 // MEAL_TEMPLATES — 12 meals (D1-3, P1-5, Po1-4) with exact totals.
-// BLOCKED: source file `_meal_tables.md` referenced in task-1-brief.md was
-// not found anywhere in this repo, its git history, or this machine's
-// filesystem. Not fabricated for the same reason as FOOD_DB above — these
-// templates are also what MEAL_TEMPLATES totals validate against phase
-// macro targets, so guessed totals would silently corrupt phase tracking.
-// Expected shape once supplied:
-//   {id, name, items:[{foodId, gramos_crudo}], totals:{prot, carb, fat, kcal}}
+// Source: docs/superpowers/data/_meal_tables.md
+// Shape: {id, name, items:[{foodId, gramos_crudo, gramos_cocido}], totals:{prot, carb, fat, kcal}}
 // --------------------------------------------------------------------------
-const MEAL_TEMPLATES = [];
+const MEAL_TEMPLATES = [
+  { id: 'd1', name: 'D1 · Huevos + jamón + aguacate', items: [
+      { foodId: 'huevo', gramos_crudo: 200, gramos_cocido: 200 },
+      { foodId: 'jamon_magro', gramos_crudo: 60, gramos_cocido: 60 },
+      { foodId: 'aguacate', gramos_crudo: 100, gramos_cocido: 100 },
+      { foodId: 'ensalada_verde', gramos_crudo: 50, gramos_cocido: 50 }
+    ], totals: { prot: 39, carb: 12, fat: 37, kcal: 526 } },
+  { id: 'd2', name: 'D2 · Yogur griego + colágeno + frutos rojos + nueces', items: [
+      { foodId: 'yogur_griego', gramos_crudo: 300, gramos_cocido: 300 },
+      { foodId: 'colageno', gramos_crudo: 20, gramos_cocido: 20 },
+      { foodId: 'frutos_rojos', gramos_crudo: 100, gramos_cocido: 100 },
+      { foodId: 'nueces', gramos_crudo: 15, gramos_cocido: 15 }
+    ], totals: { prot: 48, carb: 24, fat: 16, kcal: 434 } },
+  { id: 'd3', name: 'D3 · Batido post-ayuno (Whey + avena + banana)', items: [
+      { foodId: 'whey', gramos_crudo: 40, gramos_cocido: 40 },
+      { foodId: 'leche_entera', gramos_crudo: 300, gramos_cocido: 300 },
+      { foodId: 'avena', gramos_crudo: 40, gramos_cocido: 100 },
+      { foodId: 'banana', gramos_crudo: 100, gramos_cocido: 100 }
+    ], totals: { prot: 48, carb: 67, fat: 16, kcal: 587 } },
+  { id: 'p1', name: 'P1 · Pollo + arroz integral + ensalada (Anabolismo)', items: [
+      { foodId: 'pollo_pechuga', gramos_crudo: 220, gramos_cocido: 154 },
+      { foodId: 'arroz_integral', gramos_crudo: 70, gramos_cocido: 182 },
+      { foodId: 'ensalada_verde', gramos_crudo: 80, gramos_cocido: 80 },
+      { foodId: 'aceite_oliva', gramos_crudo: 10, gramos_cocido: 10 }
+    ], totals: { prot: 57, carb: 56, fat: 15, kcal: 596 } },
+  { id: 'p2', name: 'P2 · Salmón + quinoa + brócoli (Anabolismo)', items: [
+      { foodId: 'salmon', gramos_crudo: 200, gramos_cocido: 160 },
+      { foodId: 'quinoa', gramos_crudo: 60, gramos_cocido: 162 },
+      { foodId: 'brocoli', gramos_crudo: 150, gramos_cocido: 135 },
+      { foodId: 'aceite_oliva', gramos_crudo: 5, gramos_cocido: 5 }
+    ], totals: { prot: 53, carb: 49, fat: 35, kcal: 732 } },
+  { id: 'p3', name: 'P3 · Carne magra + batata + brócoli', items: [
+      { foodId: 'res_magra', gramos_crudo: 200, gramos_cocido: 150 },
+      { foodId: 'batata', gramos_crudo: 200, gramos_cocido: 180 },
+      { foodId: 'brocoli', gramos_crudo: 150, gramos_cocido: 135 }
+    ], totals: { prot: 49, carb: 50, fat: 17, kcal: 543 } },
+  { id: 'p4', name: 'P4 · Atún + arroz + verduras (Retatrutida bajo-carb)', items: [
+      { foodId: 'atun_fresco', gramos_crudo: 200, gramos_cocido: 150 },
+      { foodId: 'arroz_blanco', gramos_crudo: 45, gramos_cocido: 117 },
+      { foodId: 'ensalada_verde', gramos_crudo: 120, gramos_cocido: 120 },
+      { foodId: 'aceite_oliva', gramos_crudo: 10, gramos_cocido: 10 }
+    ], totals: { prot: 51, carb: 39, fat: 13, kcal: 487 } },
+  { id: 'p5', name: 'P5 · Bowl legumbres (lentejas) + pollo + palta', items: [
+      { foodId: 'lentejas', gramos_crudo: 70, gramos_cocido: 175 },
+      { foodId: 'pollo_pechuga', gramos_crudo: 120, gramos_cocido: 84 },
+      { foodId: 'aguacate', gramos_crudo: 60, gramos_cocido: 60 },
+      { foodId: 'ensalada_verde', gramos_crudo: 80, gramos_cocido: 80 }
+    ], totals: { prot: 47, carb: 50, fat: 12, kcal: 487 } },
+  { id: 'po1', name: 'Po1 · Mousse de caseína + cacao', items: [
+      { foodId: 'caseina', gramos_crudo: 30, gramos_cocido: 30 },
+      { foodId: 'leche_entera', gramos_crudo: 150, gramos_cocido: 150 },
+      { foodId: 'cacao', gramos_crudo: 8, gramos_cocido: 8 }
+    ], totals: { prot: 31, carb: 13, fat: 7, kcal: 222 } },
+  { id: 'po2', name: 'Po2 · Yogur griego + cacao + nueces', items: [
+      { foodId: 'yogur_griego', gramos_crudo: 200, gramos_cocido: 200 },
+      { foodId: 'cacao', gramos_crudo: 6, gramos_cocido: 6 },
+      { foodId: 'nueces', gramos_crudo: 12, gramos_cocido: 12 }
+    ], totals: { prot: 21, carb: 13, fat: 13, kcal: 238 } },
+  { id: 'po3', name: 'Po3 · Chía pudding proteico', items: [
+      { foodId: 'chia', gramos_crudo: 25, gramos_cocido: 25 },
+      { foodId: 'leche_entera', gramos_crudo: 200, gramos_cocido: 200 },
+      { foodId: 'whey', gramos_crudo: 15, gramos_cocido: 15 },
+      { foodId: 'frutos_rojos', gramos_crudo: 50, gramos_cocido: 50 }
+    ], totals: { prot: 23, carb: 26, fat: 16, kcal: 328 } },
+  { id: 'po4', name: 'Po4 · Manzana asada + colágeno + canela', items: [
+      { foodId: 'manzana', gramos_crudo: 150, gramos_cocido: 128 },
+      { foodId: 'colageno', gramos_crudo: 15, gramos_cocido: 15 }
+    ], totals: { prot: 14, carb: 21, fat: 0, kcal: 132 } }
+];
 
 // --------------------------------------------------------------------------
 // STATE — initial app state
