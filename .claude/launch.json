@@ -6,6 +6,13 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd app && npm run dev"],
       "port": 3000
+    },
+    {
+      "name": "tracker-v6",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd app/public && python3 -m http.server 8791"],
+      "port": 8791,
+      "url": "http://localhost:8791/tracker-v6.html"
     }
   ]
 }
