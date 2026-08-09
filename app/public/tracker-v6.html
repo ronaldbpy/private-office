@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102a43">
+  <link rel="manifest" href="tracker-manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <title>RB Tracker v6.0 - Elite Protocol</title>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ==========================================================================
+// TRACKER v6.0 — DATA LAYER (Task 1: Data Schema & Embedded Databases)
+// Skeleton + data layer only. No UI yet (added in later tasks).
+// ==========================================================================
+
+// --------------------------------------------------------------------------
+// PROTOCOLS — 3 phases, exact targets per task-1-brief.md
+// --------------------------------------------------------------------------
+const PROTOCOLS = {
+  Anabolismo: {
+    targets: { protein: 230, carbs: 250, fat: 80, calories: 2600 },
+    description: 'Fase de construcción muscular — superávit calórico controlado.'
+  },
+  Retatrutida: {
+    targets: { protein: 200, carbs: 150, fat: 70, calories: 2100 },
+    description: 'Fase de titulación GLP-1/GIP/Glucagón — déficit moderado.'
+  },
+  Purga: {
+    targets: { protein: 200, carbs: 80, fat: 70, calories: 1800 },
+    description: 'Fase de definición — déficit calórico agresivo, carbohidratos bajos.'
+  }
+};
+
+// --------------------------------------------------------------------------
+// PEPTIDES_DB — 21 peptides total.
+// Source: docs/superpowers/specs/2026-08-06-peptides-module-design.md
+//         docs/superpowers/plans/2026-08-06-peptides-implementation.md
+// (verbatim mechanism/dosage/frequency data transcribed from those specs;
+// this is the same 12 activos + 9 opcionales = 21 total used in tracker-v5,
+// re-tiered per the v6 plan's "PT-141, CJC, MOTS-C, GHK + 17 optional" split.)
+// Shape: {id, nombre, default_dose, default_frequency, notes, tier}
+// --------------------------------------------------------------------------
+const PEPTIDES_DB = [
+  // ---- CORE (4) ----
+  { id: 'pt141', nombre: 'PT-141 (Bremelanotide)', default_dose: 10, default_frequency: 'on_demand', notes: 'Agonista melanocortina (MC3R/MC4R) central, deseo sexual. No aplicar mismo día que CJC/Ipamorelin.', tier: 'core' },
+  { id: 'cjc_ipa', nombre: 'CJC/Ipamorelin', default_dose: 30, default_frequency: 'daily', notes: 'GH secretagogos sinérgicos, pulso GH fisiológico. Requiere ≥2h de ayuno.', tier: 'core' },
+  { id: 'mots_c', nombre: 'MOTS-C', default_dose: 100, default_frequency: '3x_week', notes: 'Regulador metabólico, activa AMPK, mejora sensibilidad a insulina. Aplicar en ayunas. Días: Lun/Mié/Vie.', tier: 'core' },
+  { id: 'ghk_cu', nombre: 'GHK-Cu (independiente)', default_dose: 10, default_frequency: 'weekdays_only', notes: 'Síntesis colágeno tipo I/III, elastina, glicosaminoglicanos. No aplicar sábado/domingo.', tier: 'core' },
+
+  // ---- OPTIONAL (17) ----
+  { id: 'retatrutida', nombre: 'Retatrutida', default_dose: null, default_frequency: 'weekly', notes: 'Triple agonista GLP-1/GIP/Glucagón, titulación conservadora. Día: martes.', tier: 'optional' },
+  { id: 'bpc157_am', nombre: 'BPC-157 (mañana)', default_dose: 50, default_frequency: 'daily', notes: 'Angiogénesis, curación tendones/ligamentos, repara mucosa GI.', tier: 'optional' },
+  { id: 'bpc157_pm', nombre: 'BPC-157 (noche)', default_dose: 50, default_frequency: 'daily', notes: 'Angiogénesis, curación tendones/ligamentos, repara mucosa GI.', tier: 'optional' },
+  { id: 'nad', nombre: 'NAD+', default_dose: 100, default_frequency: '3x_week', notes: 'Coenzima metabólico mitocondrial, reparación ADN, activación sirtuinas. Días: Lun/Mié/Vie.', tier: 'optional' },
+  { id: 'ta1', nombre: 'Thymosin Alpha-1', default_dose: 75, default_frequency: '2x_week', notes: 'Inmunomodulador, mejora función células T, aprobado clínico (Zadaxin). Días: Mié/Vie.', tier: 'optional' },
+  { id: 'ss31', nombre: 'SS-31 (Elamipretide)', default_dose: null, default_frequency: 'daily', notes: 'Protección mitocondrial, estabiliza cadena de electrones, reduce estrés oxidativo. 10-15mg/día (calcular L según reconstitución).', tier: 'optional' },
+  { id: 'klow', nombre: 'KLOW (sin GHK-Cu)', default_dose: 40, default_frequency: '2x_week', notes: 'Blend: BPC-157/TB-500/KPV, reparación + antiinflamatorio vía NF-κB. Días: Mié/Vie.', tier: 'optional' },
+  { id: 'semax_selank', nombre: 'Semax+Selank', default_dose: 300, default_frequency: '2x_week', notes: 'Semax: estimulante BDNF; Selank: ansiolítico; administración nasal. Días: Lun/Jue.', tier: 'optional' },
+  { id: 'opt_ara290', nombre: 'ARA-290', default_dose: null, default_frequency: 'on_demand', notes: 'Activador receptor reparación innata, dolor radicular. Evidencia: sin ensayos clínicos en dolor lumbar.', tier: 'optional' },
+  { id: 'opt_cartalax', nombre: 'Cartalax', default_dose: null, default_frequency: 'on_demand', notes: 'Bioregulador ruso dirigido a cartílago discal (10mg x 10 días). Evidencia: preclínico, sin ensayos humanos.', tier: 'optional' },
+  { id: 'opt_pinealon', nombre: 'Pinealon', default_dose: null, default_frequency: 'on_demand', notes: 'Bioregulador cerebral, protección neuronal (10mg x 10 días). Evidencia: preclínico.', tier: 'optional' },
+  { id: 'opt_dsip', nombre: 'DSIP', default_dose: null, default_frequency: 'on_demand', notes: 'Delta Sleep-Inducing Peptide, sueño de ondas lentas (100-300mcg). Evidencia: ensayos inconsistentes.', tier: 'optional' },
+  { id: 'opt_slu', nombre: 'SLU-PP-332', default_dose: null, default_frequency: 'on_demand', notes: 'Agonista receptores ERR, mimetiza ejercicio aeróbico. Evidencia: solo animal, sin dosis humana.', tier: 'optional' },
+  { id: 'opt_aod', nombre: 'AOD9604', default_dose: null, default_frequency: 'on_demand', notes: 'Fragmento HGH, lipólisis sin efecto en IGF-1 (300mcg). Evidencia: ensayo clínico no superó placebo.', tier: 'optional' },
+  { id: 'opt_oxy', nombre: 'Oxytocin (SC)', default_dose: null, default_frequency: 'on_demand', notes: 'Modulación bienestar/vínculo social vía SNC. Evidencia sólida es intranasal, débil vía SC.', tier: 'optional' },
+  { id: 'opt_humanin', nombre: 'Humanin', default_dose: null, default_frequency: '3x_week', notes: 'Péptido mitocondrial, mejora sensibilidad insulina (~1mg 3x/sem). Evidencia: sin ensayos SC, mayoría cultivo/animal.', tier: 'optional' },
+  { id: 'opt_foxo4', nombre: 'FOXO4-DRI', default_dose: null, default_frequency: 'on_demand', notes: 'Senolítico, apoptosis células senescentes. Evidencia: un estudio en ratones (2017), cero humanos.', tier: 'optional' }
+];
+
+// --------------------------------------------------------------------------
+// FOOD_DB — 34 foods with exact macros per 100g (crudo & cocido).
+// BLOCKED: source file `alimentos_crudo_cocido_macros.json` referenced in
+// task-1-brief.md was not found anywhere in this repo, its git history, or
+// this machine's filesystem (searched Developer/, home dir, Desktop,
+// Downloads, Documents, iCloud Drive). It was not fabricated here — inventing
+// "exact" crudo/cocido macro values for a database that feeds real macro
+// targets tied to a medical protocol (Retatrutida titration, 1800kcal Purga
+// floor) is a data-integrity risk, not a formatting detail. See
+// task-1-report.md for what's needed to unblock this.
+// Expected shape once supplied:
+//   {id, nombre, categoria, factor_cocido_sobre_crudo,
+//    crudo_100g:{kcal,prot,carb,grasa}, cocido_100g:{kcal,prot,carb,grasa}}
+// --------------------------------------------------------------------------
+const FOOD_DB = [];
+
+// --------------------------------------------------------------------------
+// MEAL_TEMPLATES — 12 meals (D1-3, P1-5, Po1-4) with exact totals.
+// BLOCKED: source file `_meal_tables.md` referenced in task-1-brief.md was
+// not found anywhere in this repo, its git history, or this machine's
+// filesystem. Not fabricated for the same reason as FOOD_DB above — these
+// templates are also what MEAL_TEMPLATES totals validate against phase
+// macro targets, so guessed totals would silently corrupt phase tracking.
+// Expected shape once supplied:
+//   {id, name, items:[{foodId, gramos_crudo}], totals:{prot, carb, fat, kcal}}
+// --------------------------------------------------------------------------
+const MEAL_TEMPLATES = [];
+
+// --------------------------------------------------------------------------
+// STATE — initial app state
+// --------------------------------------------------------------------------
+let state = {
+  version: 6,
+  protocols: PROTOCOLS,
+  records: {},
+  selectedPhase: 'Anabolismo',
+  macroTargets: PROTOCOLS.Anabolismo.targets
+};
+
+console.log('[tracker-v6] data layer loaded', {
+  FOOD_DB: FOOD_DB.length,
+  PROTOCOLS: Object.keys(PROTOCOLS).length,
+  MEAL_TEMPLATES: MEAL_TEMPLATES.length,
+  PEPTIDES_DB: PEPTIDES_DB.length,
+  state
+});
+</script>
+</body>
+</html>
