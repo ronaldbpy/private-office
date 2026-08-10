@@ -858,7 +858,13 @@ const PEPTIDES_DB = [
 // Shape: {id, nombre, categoria, principio_activo, dosis_unidad, propiedades, inicio_date}
 // --------------------------------------------------------------------------
 const MEDICATIONS_DB = [
-  { id: 'tirzepatida', nombre: 'Tirzepatida', categoria: 'GLP-1/GIP', principio_activo: 'Tirzepatida', dosis_unidad: 'mg', propiedades: 'Doble agonista GLP-1/GIP. Suprime apetito, mejora sensibilidad insulina, pérdida de peso. Inicio: 2.5mg SC semanal, titulación cada 4 sem.', inicio_date: '2026-08-09' }
+  { id: 'tirzepatida', nombre: 'Tirzepatida', categoria: 'GLP-1/GIP', principio_activo: 'Tirzepatida', dosis_unidad: 'mg', propiedades: 'Doble agonista GLP-1/GIP. Suprime apetito, mejora sensibilidad insulina, pérdida de peso. Inicio: 2.5mg SC semanal, titulación cada 4 sem.', inicio_date: '2026-08-09' },
+  { id: 'ibuprofen', nombre: 'Ibuprofeno', categoria: 'AINE', principio_activo: 'Ibuprofeno', dosis_unidad: 'mg', propiedades: 'Antiinflamatorio, analgésico. Dosis: 400-600mg c/6-8h. Usar con alimento. Max 1200mg/día sin prescripción.', inicio_date: null },
+  { id: 'paracetamol', nombre: 'Paracetamol (Acetaminofén)', categoria: 'Analgésico', principio_activo: 'Paracetamol', dosis_unidad: 'mg', propiedades: 'Analgésico, antipirético. Dosis: 500-1000mg c/4-6h. Max 4000mg/día. Evitar alcohol.', inicio_date: null },
+  { id: 'naproxeno', nombre: 'Naproxeno', categoria: 'AINE', principio_activo: 'Naproxeno', dosis_unidad: 'mg', propiedades: 'AINE de larga duración (8-12h). Dosis: 250-500mg c/8-12h. Usar con alimento.', inicio_date: null },
+  { id: 'tramadol', nombre: 'Tramadol', categoria: 'Analgésico opiáceo', principio_activo: 'Tramadol HCl', dosis_unidad: 'mg', propiedades: 'Analgésico débil-moderado. Dosis: 50-100mg c/4-6h. Max 400mg/día. Requiere prescripción.', inicio_date: null },
+  { id: 'magnesio', nombre: 'Magnesio (suplemento)', categoria: 'Mineral', principio_activo: 'Mg (citrato/glicinato)', dosis_unidad: 'mg', propiedades: 'Relajación muscular, sueño, migraña. Dosis: 300-400mg antes dormir. Efecto laxante posible.', inicio_date: null },
+  { id: 'acido_urico', nombre: 'Alopurinol', categoria: 'Antigota', principio_activo: 'Alopurinol', dosis_unidad: 'mg', propiedades: 'Inhibidor xantina oxidasa, reduce ácido úrico. Dosis: 100-300mg/día. Requiere prescripción y monitoreo.', inicio_date: null }
 ];
 
 // --------------------------------------------------------------------------
@@ -876,13 +882,6 @@ const HYDRATION_DB = [
   { id: 'tea_green', name: 'Té verde', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
   { id: 'tea_black', name: 'Té negro', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
   { id: 'herbal_tea', name: 'Infusión', category: 'Herbal', volume_ml: 200, kcal: 0, hydration_ml: 200 }
-];
-  { id: 'ibuprofen', nombre: 'Ibuprofeno', categoria: 'AINE', principio_activo: 'Ibuprofeno', dosis_unidad: 'mg', propiedades: 'Antiinflamatorio, analgésico. Dosis: 400-600mg c/6-8h. Usar con alimento. Max 1200mg/día sin prescripción.', inicio_date: null },
-  { id: 'paracetamol', nombre: 'Paracetamol (Acetaminofén)', categoria: 'Analgésico', principio_activo: 'Paracetamol', dosis_unidad: 'mg', propiedades: 'Analgésico, antipirético. Dosis: 500-1000mg c/4-6h. Max 4000mg/día. Evitar alcohol.', inicio_date: null },
-  { id: 'naproxeno', nombre: 'Naproxeno', categoria: 'AINE', principio_activo: 'Naproxeno', dosis_unidad: 'mg', propiedades: 'AINE de larga duración (8-12h). Dosis: 250-500mg c/8-12h. Usar con alimento.', inicio_date: null },
-  { id: 'tramadol', nombre: 'Tramadol', categoria: 'Analgésico opiáceo', principio_activo: 'Tramadol HCl', dosis_unidad: 'mg', propiedades: 'Analgésico débil-moderado. Dosis: 50-100mg c/4-6h. Max 400mg/día. Requiere prescripción.', inicio_date: null },
-  { id: 'magnesio', nombre: 'Magnesio (suplemento)', categoria: 'Mineral', principio_activo: 'Mg (citrato/glicinato)', dosis_unidad: 'mg', propiedades: 'Relajación muscular, sueño, migraña. Dosis: 300-400mg antes dormir. Efecto laxante posible.', inicio_date: null },
-  { id: 'acido_urico', nombre: 'Alopurinol', categoria: 'Antigota', principio_activo: 'Alopurinol', dosis_unidad: 'mg', propiedades: 'Inhibidor xantina oxidasa, reduce ácido úrico. Dosis: 100-300mg/día. Requiere prescripción y monitoreo.', inicio_date: null }
 ];
 
 // --------------------------------------------------------------------------
@@ -1103,21 +1102,33 @@ function getHydrationChart7Days() {
   return data;
 }
 
-// getMacrosByWeight(foodId, grams, isCocido) → macros for a given weight
-// of a FOOD_DB item. `grams` is interpreted as raw ("crudo") weight by
-// default; when isCocido is true, `grams` is cooked weight and is first
-// converted back to its raw equivalent via factor_cocido_sobre_crudo
-// (cooked_grams / factor = raw_grams) before applying the food's
-// crudo_100g macro rates. Values are rounded to 1 decimal place.
+// getMacrosByWeight(foodId, grams, isCocido) → macros for a given weight.
+// Handles both NUTRITION_DB (portion-based) and FOOD_DB (per-100g) formats.
 function getMacrosByWeight(foodId, grams, isCocido) {
   isCocido = isCocido || false;
+  const round1 = function (x) { return Math.round(x * 10) / 10; };
+
+  // Try NUTRITION_DB first (portion-based)
+  if (typeof NUTRITION_DB !== 'undefined' && NUTRITION_DB.foods && Array.isArray(NUTRITION_DB.foods)) {
+    const nutrFood = NUTRITION_DB.foods.find(function (f) { return f.id === foodId; });
+    if (nutrFood) {
+      // NUTRITION_DB returns fixed portion macros directly (no scaling by grams)
+      return {
+        prot: round1(n(nutrFood.protein) || 0),
+        carb: round1(n(nutrFood.carbs) || 0),
+        fat: round1(n(nutrFood.fat) || 0),
+        kcal: round1(n(nutrFood.kcal) || 0)
+      };
+    }
+  }
+
+  // Fallback to FOOD_DB (per-100g)
   const food = FOOD_DB.find(function (f) { return f.id === foodId; });
   if (!food) return { prot: 0, carb: 0, fat: 0, kcal: 0 };
 
   const gramsCrudo = isCocido ? n(grams) / food.factor_cocido_sobre_crudo : n(grams);
   const ratio = gramsCrudo / 100;
   const base = food.crudo_100g;
-  const round1 = function (x) { return Math.round(x * 10) / 10; };
 
   return {
     prot: round1(base.prot * ratio),
@@ -1167,10 +1178,20 @@ let mealBuilderState = { isCocido: false };
 // a weight input, a Crudo/Cocido toggle button, a live macros preview card,
 // and a footer with Cancel / "Agregar a hoy" submit.
 function mealBuilderModal() {
-  const foodOptions = FOOD_DB
+  // Use NUTRITION_DB if available, else fallback to FOOD_DB
+  const foodSource = (typeof NUTRITION_DB !== 'undefined' && NUTRITION_DB.foods && Array.isArray(NUTRITION_DB.foods)) ? NUTRITION_DB.foods : FOOD_DB;
+  const foodOptions = (Array.isArray(foodSource) ? foodSource : FOOD_DB)
     .slice()
-    .sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); })
-    .map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; })
+    .sort(function (a, b) {
+      const nameA = a.nombre || a.name || '';
+      const nameB = b.nombre || b.name || '';
+      return nameA.localeCompare(nameB, 'es');
+    })
+    .map(function (f) {
+      const id = f.id;
+      const name = f.nombre || f.name;
+      return '<option value="' + esc(id) + '">' + esc(name) + '</option>';
+    })
     .join('');
 
   const templateChips = MEAL_TEMPLATES
@@ -1210,7 +1231,7 @@ function mealBuilderModal() {
             '<div class="form-row">' +
               '<div class="form-group" style="margin-bottom:0;">' +
                 '<label for="mealWeight">Peso (g)</label>' +
-                '<input type="number" id="mealWeight" inputmode="decimal" min="1" step="1" placeholder="220" required>' +
+                '<input type="number" id="mealWeight" inputmode="decimal" min="1" step="1" value="220" placeholder="220" required>' +
               '</div>' +
               '<div class="form-group" style="margin-bottom:0;">' +
                 '<label>&nbsp;</label>' +
@@ -1315,8 +1336,9 @@ function addMealTemplate(templateId) {
 }
 
 // handleMealSubmit(e) → reads the custom-weight form, computes macros for
-// the selected food + weight + crudo/cocido state, appends a meal to
-// today's rec().meals, persists, closes the modal, and re-renders if the
+// the selected food + weight + crudo/cocido state. If mealBuilderState.mealId
+// exists, updates an existing meal; otherwise appends a new meal to
+// today's rec().meals. Persists, closes the modal, and re-renders if the
 // main render loop (Task 8) exists.
 function handleMealSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
@@ -1325,14 +1347,18 @@ function handleMealSubmit(e) {
   const weightInput = document.getElementById('mealWeight');
   const foodId = select ? select.value : '';
   const grams = weightInput ? n(weightInput.value) : 0;
-  const food = FOOD_DB.find(function (f) { return f.id === foodId; });
+  // Buscar en NUTRITION_DB.foods primero, luego en FOOD_DB
+  let food = (typeof NUTRITION_DB !== 'undefined' && NUTRITION_DB.foods && Array.isArray(NUTRITION_DB.foods)) ?
+    NUTRITION_DB.foods.find(function (f) { return f.id === foodId; }) : null;
+  if (!food) food = FOOD_DB.find(function (f) { return f.id === foodId; });
   if (!food || grams <= 0) return;
 
   const isCocido = mealBuilderState.isCocido;
   const macros = getMacrosByWeight(foodId, grams, isCocido);
 
+  const mealId = mealBuilderState.mealId || ('m_' + Date.now());
   const meal = {
-    id: 'm_' + Date.now(),
+    id: mealId,
     name: food.nombre + ' (' + grams + 'g ' + (isCocido ? 'cocido' : 'crudo') + ')',
     foodId: food.id,
     gramos: grams,
@@ -1343,10 +1369,46 @@ function handleMealSubmit(e) {
     kcal: macros.kcal,
     timestamp: new Date().toISOString()
   };
-  rec().meals.push(meal);
+
+  if (mealBuilderState.mealId) {
+    // Edit existing meal: find by id and update
+    const meals = rec().meals || [];
+    const idx = meals.findIndex(function (m) { return m.id === mealBuilderState.mealId; });
+    if (idx >= 0) meals[idx] = meal;
+  } else {
+    // New meal: append to array
+    rec().meals.push(meal);
+  }
+
   save();
   closeMeal();
   if (typeof render === 'function') render();
+}
+
+function editMeal(mealId) {
+  const meal = rec().meals.find(function (m) { return m.id === mealId; });
+  if (!meal) return;
+  mealBuilderState = { isCocido: meal.isCocido, mealId: mealId };
+  closeMeal();
+  document.body.insertAdjacentHTML('beforeend', mealBuilderModal());
+  setTimeout(function() {
+    const select = document.getElementById('foodSelect');
+    const weight = document.getElementById('mealWeight');
+    if (select) select.value = meal.foodId;
+    if (weight) weight.value = meal.gramos;
+    updateMacrosPreview();
+    attachMealModalListeners();
+  }, 50);
+}
+
+function deleteMeal(mealId) {
+  const meal = rec().meals.find(function (m) { return m.id === mealId; });
+  if (!meal) return;
+  if (confirm('¿Eliminar ' + meal.name + '?')) {
+    rec().meals = rec().meals.filter(function (m) { return m.id !== mealId; });
+    save();
+    if (typeof render === 'function') render();
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -2984,11 +3046,10 @@ applyStoredTheme();
 state = load();
 if (Object.keys(state.records).length === 0) {
   migrateFromV5();
-  // Uncomment next line to seed demo data if still empty after migration:
-  // if (Object.keys(state.records).length === 0) seedDemoData();
 }
 attachEventListeners();
 render();
 </script>
+<script src="/tracker/nutrition-db.js"></script>
 </body>
 </html>
