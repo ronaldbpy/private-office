@@ -2430,10 +2430,15 @@ function handleAddMedication(e) {
     return;
   }
 
+  // Use importDoctorMedications for proper recurring medication setup
+  // This is a simplified entry point - for full scheduling, use the console command:
+  // importDoctorMedications([{ id, nombre, dosis, horarios, fecha_inicio, fecha_fin, via, etc. }])
+
   if (!state.medications) state.medications = {};
   state.medications[medId] = {
     id: medId,
-    dosis_actual: dosis,
+    nombre: med.nombre,
+    dosis: dosis + ' ' + (med.default_unit || 'mg'),
     fecha_inicio: fecha,
     estado: 'activo',
     notas: notas
@@ -2442,7 +2447,7 @@ function handleAddMedication(e) {
   save();
   closeMedicationForm();
   render();
-  showSettingsStatus('Medicamento agregado: ' + med.nombre);
+  showSettingsStatus('Plantilla guardada. Para crear dosis recurrentes, usa la importación de datos.');
 }
 
 // --------------------------------------------------------------------------
@@ -2734,6 +2739,10 @@ function closeHydrationModal() {
 
 // Medication Modal & Handlers
 function medicationModal() {
+  const medOptions = MEDICATIONS_DB.map(function (med) {
+    return '<option value="' + med.id + '">' + esc(med.nombre) + ' (' + med.categoria + ')</option>';
+  }).join('');
+
   const html = '' +
     '<div class="modal-overlay" id="medicationModalOverlay" onclick="if(event.target===this) closeMedicationModal()">' +
       '<div class="modal active" id="medicationModal" role="dialog" aria-modal="true">' +
@@ -2743,16 +2752,25 @@ function medicationModal() {
         '<div class="modal-body">' +
           '<form id="medicationForm" onsubmit="handleMedicationSubmit(event)">' +
             '<div class="form-group">' +
-              '<label>Nombre del medicamento</label>' +
+              '<label>Medicamento</label>' +
+              '<select id="medicationSelect" onchange="updateMedicationDefaults()" style="margin-bottom: 8px;">' +
+                '<option value="">-- Selecciona de lista o ingresa manual --</option>' +
+                '<optgroup label="Comunes">' + medOptions + '</optgroup>' +
+              '</select>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Nombre</label>' +
               '<input type="text" id="medicationName" placeholder="ej. Tramadol" required>' +
             '</div>' +
-            '<div class="form-group">' +
-              '<label>Dosis</label>' +
-              '<input type="number" id="medicationDose" inputmode="decimal" step="0.1" placeholder="50" required>' +
-            '</div>' +
-            '<div class="form-group">' +
-              '<label>Unidad</label>' +
-              '<input type="text" id="medicationUnit" placeholder="mg" required>' +
+            '<div class="form-row">' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label>Dosis</label>' +
+                '<input type="number" id="medicationDose" inputmode="decimal" step="0.1" placeholder="50" required>' +
+              '</div>' +
+              '<div class="form-group" style="margin-bottom:0;">' +
+                '<label>Unidad</label>' +
+                '<input type="text" id="medicationUnit" value="mg" placeholder="mg" required>' +
+              '</div>' +
             '</div>' +
             '<div class="form-group">' +
               '<label>Hora</label>' +
@@ -2760,7 +2778,7 @@ function medicationModal() {
             '</div>' +
             '<div class="form-group">' +
               '<label>Notas (opcional)</label>' +
-              '<textarea id="medicationNotes" placeholder="Observaciones..." rows="3"></textarea>' +
+              '<textarea id="medicationNotes" placeholder="Observaciones..." rows="2"></textarea>' +
             '</div>' +
             '<div class="form-actions">' +
               '<button type="submit" class="btn block">Registrar</button>' +
@@ -2773,10 +2791,34 @@ function medicationModal() {
   return html;
 }
 
+function updateMedicationDefaults() {
+  const select = document.getElementById('medicationSelect');
+  const nameInput = document.getElementById('medicationName');
+  const unitInput = document.getElementById('medicationUnit');
+
+  if (!select || !select.value) return;
+
+  const med = MEDICATIONS_DB.find(function(m) { return m.id === select.value; });
+  if (med) {
+    nameInput.value = med.nombre;
+    unitInput.value = med.dosis_unidad || 'mg';
+  }
+}
+
 function openMedicationModal() {
   const overlay = document.getElementById('medicationModalOverlay');
   if (overlay) overlay.remove();
   document.body.insertAdjacentHTML('beforeend', medicationModal());
+
+  // Set default time to current hour
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const timeInput = document.getElementById('medicationTime');
+  if (timeInput) {
+    timeInput.value = hours + ':' + minutes;
+  }
+
   document.getElementById('medicationForm').addEventListener('submit', handleMedicationSubmit);
 }
 
