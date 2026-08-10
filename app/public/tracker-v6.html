@@ -2274,19 +2274,33 @@ function handleAddMedication(e) {
 // Returns array of {date: 'YYYY-MM-DD', weight: number (kg)}.
 function parseAppleHealth(xmlString) {
   const weights = [];
-  const regex = /type="HKQuantityTypeIdentifierBodyMass"[^>]*value="([^"]*)"[^>]*startDate="([^"]*)"/g;
-  let match;
+  // Find all HKQuantityTypeIdentifierBodyMass Record elements
+  const typeRegex = /type="HKQuantityTypeIdentifierBodyMass"/g;
+  let typeMatch;
 
-  while ((match = regex.exec(xmlString)) !== null) {
-    const weight = n(match[1]);
-    const startDateStr = match[2]; // format: "2026-02-11 11:16:48 -0300"
+  while ((typeMatch = typeRegex.exec(xmlString)) !== null) {
+    // Extract the full Record element (from <Record to />)
+    const recordStart = xmlString.lastIndexOf('<Record', typeMatch.index);
+    const recordEnd = xmlString.indexOf('/>', typeMatch.index);
+    if (recordStart === -1 || recordEnd === -1) continue;
 
-    // Extract YYYY-MM-DD from "2026-02-11 11:16:48 -0300"
-    const parts = startDateStr.split(' ');
-    const date = parts[0];
+    const record = xmlString.substring(recordStart, recordEnd + 2);
 
-    if (weight > 0 && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      weights.push({ date: date, weight: weight });
+    // Extract value and startDate attributes (order-independent)
+    const valueMatch = record.match(/value="([^"]*)"/);
+    const startDateMatch = record.match(/startDate="([^"]*)"/);
+
+    if (valueMatch && startDateMatch) {
+      const weight = n(valueMatch[1]);
+      const startDateStr = startDateMatch[1]; // format: "2026-02-11 11:16:48 -0300"
+
+      // Extract YYYY-MM-DD from "2026-02-11 11:16:48 -0300"
+      const parts = startDateStr.split(' ');
+      const date = parts[0];
+
+      if (weight > 0 && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        weights.push({ date: date, weight: weight });
+      }
     }
   }
 
