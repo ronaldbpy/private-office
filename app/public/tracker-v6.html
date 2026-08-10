@@ -885,7 +885,11 @@ const HYDRATION_DB = [
   { id: 'tea_green', name: 'Té verde', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
   { id: 'tea_black', name: 'Té negro', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
   { id: 'herbal_tea', name: 'Infusión', category: 'Herbal', volume_ml: 200, kcal: 0, hydration_ml: 200 },
-  { id: 'coca_zero', name: 'Coca Cola Zero', category: 'Refrescos', volume_ml: 250, kcal: 1, hydration_ml: 240 }
+  { id: 'coca_zero', name: 'Coca Cola Zero', category: 'Refrescos', volume_ml: 250, kcal: 1, hydration_ml: 240 },
+  { id: 'leche_entera_bev', name: 'Leche entera', category: 'Lacteos', volume_ml: 250, kcal: 155, hydration_ml: 240 },
+  { id: 'yogur_griego_bev', name: 'Yogur griego', category: 'Lacteos', volume_ml: 200, kcal: 146, hydration_ml: 190 },
+  { id: 'whey_shake', name: 'Batido whey', category: 'Proteicos', volume_ml: 300, kcal: 120, hydration_ml: 280 },
+  { id: 'casein_shake', name: 'Batido casein', category: 'Proteicos', volume_ml: 300, kcal: 111, hydration_ml: 280 }
 ];
 
 // --------------------------------------------------------------------------
@@ -905,10 +909,6 @@ const FOOD_DB = [
   { id: 'huevo', nombre: 'Huevo entero', categoria: 'Proteina', metodo_coccion: 'hervido/revuelto', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 143, prot: 12.6, carb: 0.7, grasa: 9.5 }, cocido_100g: { kcal: 143.0, prot: 12.6, carb: 0.7, grasa: 9.5 }, notas: '1 huevo ~50 g' },
   { id: 'clara_huevo', nombre: 'Clara de huevo', categoria: 'Proteina', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 52, prot: 11.0, carb: 0.7, grasa: 0.2 }, cocido_100g: { kcal: 52.0, prot: 11.0, carb: 0.7, grasa: 0.2 }, notas: '1 clara ~33 g' },
   { id: 'jamon_magro', nombre: 'Jamón magro', categoria: 'Proteina', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 120, prot: 18.0, carb: 1.0, grasa: 5.0 }, cocido_100g: { kcal: 120.0, prot: 18.0, carb: 1.0, grasa: 5.0 }, notas: 'Cocido, bajo en grasa' },
-  { id: 'yogur_griego', nombre: 'Yogur griego natural', categoria: 'Lacteo', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 73, prot: 9.0, carb: 4.0, grasa: 2.0 }, cocido_100g: { kcal: 73.0, prot: 9.0, carb: 4.0, grasa: 2.0 }, notas: '2% grasa; descremado ~10 prot' },
-  { id: 'leche_entera', nombre: 'Leche entera', categoria: 'Lacteo', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 62, prot: 3.3, carb: 4.8, grasa: 3.6 }, cocido_100g: { kcal: 62.0, prot: 3.3, carb: 4.8, grasa: 3.6 }, notas: 'Descremada: ~35kcal/0.1 grasa' },
-  { id: 'whey', nombre: 'Proteína whey (polvo)', categoria: 'Suplemento', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 400, prot: 80.0, carb: 8.0, grasa: 6.0 }, cocido_100g: { kcal: 400.0, prot: 80.0, carb: 8.0, grasa: 6.0 }, notas: '1 scoop ~30 g = 24 g prot' },
-  { id: 'caseina', nombre: 'Caseína (polvo)', categoria: 'Suplemento', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 370, prot: 80.0, carb: 5.0, grasa: 3.0 }, cocido_100g: { kcal: 370.0, prot: 80.0, carb: 5.0, grasa: 3.0 }, notas: 'Liberación lenta, nocturna' },
   { id: 'colageno', nombre: 'Colágeno péptidos (polvo)', categoria: 'Suplemento', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 360, prot: 90.0, carb: 0.0, grasa: 0.0 }, cocido_100g: { kcal: 360.0, prot: 90.0, carb: 0.0, grasa: 0.0 }, notas: 'Proteína incompleta; con vit C' },
   { id: 'lentejas', nombre: 'Lentejas', categoria: 'Carbo/Proteina', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.5, crudo_100g: { kcal: 350, prot: 25.0, carb: 60.0, grasa: 1.0 }, cocido_100g: { kcal: 140.0, prot: 10.0, carb: 24.0, grasa: 0.4 }, notas: 'Peso en seco' },
   { id: 'garbanzos', nombre: 'Garbanzos', categoria: 'Carbo/Proteina', metodo_coccion: 'hervido', factor_cocido_sobre_crudo: 2.4, crudo_100g: { kcal: 364, prot: 19.0, carb: 61.0, grasa: 6.0 }, cocido_100g: { kcal: 151.7, prot: 7.9, carb: 25.4, grasa: 2.5 }, notas: 'Peso en seco' },
@@ -944,18 +944,15 @@ const MEAL_TEMPLATES = [
       { foodId: 'aguacate', gramos_crudo: 100, gramos_cocido: 100 },
       { foodId: 'ensalada_verde', gramos_crudo: 50, gramos_cocido: 50 }
     ], totals: { prot: 39, carb: 12, fat: 37, kcal: 526 } },
-  { id: 'd2', name: 'D2 · Yogur griego + colágeno + frutos rojos + nueces', items: [
-      { foodId: 'yogur_griego', gramos_crudo: 300, gramos_cocido: 300 },
+  { id: 'd2', name: 'D2 · Colágeno + frutos rojos + nueces', items: [
       { foodId: 'colageno', gramos_crudo: 20, gramos_cocido: 20 },
       { foodId: 'frutos_rojos', gramos_crudo: 100, gramos_cocido: 100 },
       { foodId: 'nueces', gramos_crudo: 15, gramos_cocido: 15 }
-    ], totals: { prot: 48, carb: 24, fat: 16, kcal: 434 } },
-  { id: 'd3', name: 'D3 · Batido post-ayuno (Whey + avena + banana)', items: [
-      { foodId: 'whey', gramos_crudo: 40, gramos_cocido: 40 },
-      { foodId: 'leche_entera', gramos_crudo: 300, gramos_cocido: 300 },
+    ], totals: { prot: 28, carb: 24, fat: 16, kcal: 342 } },
+  { id: 'd3', name: 'D3 · Avena + banana', items: [
       { foodId: 'avena', gramos_crudo: 40, gramos_cocido: 100 },
       { foodId: 'banana', gramos_crudo: 100, gramos_cocido: 100 }
-    ], totals: { prot: 48, carb: 67, fat: 16, kcal: 587 } },
+    ], totals: { prot: 7, carb: 51, fat: 2, kcal: 224 } },
   { id: 'p1', name: 'P1 · Pollo + arroz integral + ensalada (Anabolismo)', items: [
       { foodId: 'pollo_pechuga', gramos_crudo: 220, gramos_cocido: 154 },
       { foodId: 'arroz_integral', gramos_crudo: 70, gramos_cocido: 182 },
@@ -985,22 +982,20 @@ const MEAL_TEMPLATES = [
       { foodId: 'aguacate', gramos_crudo: 60, gramos_cocido: 60 },
       { foodId: 'ensalada_verde', gramos_crudo: 80, gramos_cocido: 80 }
     ], totals: { prot: 47, carb: 50, fat: 12, kcal: 487 } },
-  { id: 'po1', name: 'Po1 · Mousse de caseína + cacao', items: [
-      { foodId: 'caseina', gramos_crudo: 30, gramos_cocido: 30 },
-      { foodId: 'leche_entera', gramos_crudo: 150, gramos_cocido: 150 },
-      { foodId: 'cacao', gramos_crudo: 8, gramos_cocido: 8 }
-    ], totals: { prot: 31, carb: 13, fat: 7, kcal: 222 } },
-  { id: 'po2', name: 'Po2 · Yogur griego + cacao + nueces', items: [
-      { foodId: 'yogur_griego', gramos_crudo: 200, gramos_cocido: 200 },
+  { id: 'po1', name: 'Po1 · Cacao + colágeno', items: [
+      { foodId: 'cacao', gramos_crudo: 8, gramos_cocido: 8 },
+      { foodId: 'colageno', gramos_crudo: 12, gramos_cocido: 12 }
+    ], totals: { prot: 30, carb: 13, fat: 4, kcal: 197 } },
+  { id: 'po2', name: 'Po2 · Cacao + nueces + colágeno', items: [
       { foodId: 'cacao', gramos_crudo: 6, gramos_cocido: 6 },
-      { foodId: 'nueces', gramos_crudo: 12, gramos_cocido: 12 }
-    ], totals: { prot: 21, carb: 13, fat: 13, kcal: 238 } },
-  { id: 'po3', name: 'Po3 · Chía pudding proteico', items: [
+      { foodId: 'nueces', gramos_crudo: 12, gramos_cocido: 12 },
+      { foodId: 'colageno', gramos_crudo: 10, gramos_cocido: 10 }
+    ], totals: { prot: 20, carb: 13, fat: 13, kcal: 225 } },
+  { id: 'po3', name: 'Po3 · Chía + frutos rojos + colágeno', items: [
       { foodId: 'chia', gramos_crudo: 25, gramos_cocido: 25 },
-      { foodId: 'leche_entera', gramos_crudo: 200, gramos_cocido: 200 },
-      { foodId: 'whey', gramos_crudo: 15, gramos_cocido: 15 },
-      { foodId: 'frutos_rojos', gramos_crudo: 50, gramos_cocido: 50 }
-    ], totals: { prot: 23, carb: 26, fat: 16, kcal: 328 } },
+      { foodId: 'frutos_rojos', gramos_crudo: 50, gramos_cocido: 50 },
+      { foodId: 'colageno', gramos_crudo: 15, gramos_cocido: 15 }
+    ], totals: { prot: 23, carb: 20, fat: 16, kcal: 288 } },
   { id: 'po4', name: 'Po4 · Manzana asada + colágeno + canela', items: [
       { foodId: 'manzana', gramos_crudo: 150, gramos_cocido: 128 },
       { foodId: 'colageno', gramos_crudo: 15, gramos_cocido: 15 }
