@@ -670,6 +670,9 @@
   .chart-svg .weight-bar.is-max { fill: var(--color-warning); }
   .chart-svg .weight-bar.is-min { fill: var(--color-success); }
   .chart-svg .weight-bar.is-max:hover, .chart-svg .weight-bar.is-min:hover { opacity: 1; }
+  .chart-svg .weight-bar-label { fill: var(--text); font-size: 9px; font-weight: 700; font-family: var(--font-sans); }
+  .chart-svg .trend-line { fill: none; stroke: var(--text-faint); stroke-width: 1.5; opacity: 0.5; }
+  .chart-svg .axis-label-rotated { fill: var(--text-faint); font-size: 8px; font-family: var(--font-sans); text-anchor: start; }
 
   /* ---- 12. Tables ------------------------------------------------------------------*/
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: var(--space-4); }
@@ -1921,19 +1924,68 @@ function weightChart(days) {
     return parts[2] + '/' + parts[1];
   };
 
-  const bars = entries.map(function (e, i) {
+  // Calculate bar positions and data for trend line
+  const barData = entries.map(function (e, i) {
     const x = padLeft + i * slot + (slot - barW) / 2;
     const ratio = (e.weight - min) / range;
     const barH = Math.max(2, ratio * chartH);
     const y = padTop + (chartH - barH);
-    const cls = 'weight-bar' + (e.weight === max ? ' is-max' : '') + (e.weight === min ? ' is-min' : '');
-    return '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) +
-      '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" rx="1.5">' +
-        '<title>' + esc(fmtDate(e.date)) + ': ' + e.weight + ' kg</title>' +
+    return { x: x, y: y, barH: barH, weight: e.weight, isMax: e.weight === max, isMin: e.weight === min, date: e.date };
+  });
+
+  // Generate bar rectangles with labels on max/min
+  const bars = barData.map(function (bar, i) {
+    const cls = 'weight-bar' + (bar.isMax ? ' is-max' : '') + (bar.isMin ? ' is-min' : '');
+    let barSvg = '<rect class="' + cls + '" x="' + bar.x.toFixed(1) + '" y="' + bar.y.toFixed(1) +
+      '" width="' + barW.toFixed(1) + '" height="' + bar.barH.toFixed(1) + '" rx="1.5">' +
+        '<title>' + esc(fmtDate(bar.date)) + ': ' + bar.weight + ' kg</title>' +
       '</rect>';
+
+    // Add value label above max/min bars only to reduce clutter
+    if (bar.isMax || bar.isMin) {
+      const labelY = bar.y - 3;
+      barSvg += '<text class="weight-bar-label" x="' + (bar.x + barW / 2).toFixed(1) + '" y="' + labelY.toFixed(1) + '" text-anchor="middle">' + bar.weight.toFixed(1) + '</text>';
+    }
+
+    return barSvg;
+  }).join('');
+
+  // Generate trend line (linear interpolation from first to last weight)
+  const firstBar = barData[0];
+  const lastBar = barData[barData.length - 1];
+  const trendLine = '<line class="trend-line" x1="' + (firstBar.x + barW / 2).toFixed(1) + '" y1="' + firstBar.y.toFixed(1) +
+    '" x2="' + (lastBar.x + barW / 2).toFixed(1) + '" y2="' + lastBar.y.toFixed(1) + '"/>';
+
+  // Calculate date label spacing: show dates at regular intervals if many entries
+  const dateLabels = [];
+  const labelInterval = Math.ceil(entries.length / 5); // Show up to 5 date labels
+  for (let i = 0; i < entries.length; i += labelInterval) {
+    if (i < entries.length) {
+      const bar = barData[i];
+      dateLabels.push({
+        x: bar.x + barW / 2,
+        date: entries[i].date,
+        index: i
+      });
+    }
+  }
+
+  // Always ensure last date is shown if not already included
+  if ((entries.length - 1) % labelInterval !== 0) {
+    const lastBar = barData[entries.length - 1];
+    dateLabels.push({
+      x: lastBar.x + barW / 2,
+      date: entries[entries.length - 1].date,
+      index: entries.length - 1
+    });
+  }
+
+  const dateAxisLabels = dateLabels.map(function (lbl) {
+    return '<g><text class="axis-label-rotated" x="' + lbl.x.toFixed(1) + '" y="' + (padTop + chartH + 12) + '" transform="rotate(-45 ' + lbl.x.toFixed(1) + ' ' + (padTop + chartH + 12) + ')">' + esc(fmtDate(lbl.date)) + '</text></g>';
   }).join('');
 
   const delta = entries[entries.length - 1].weight - entries[0].weight;
+  const deltaIcon = delta > 0 ? '📈' : (delta < 0 ? '📉' : '➡️');
   const deltaLabel = (delta > 0 ? '+' : '') + delta.toFixed(1) + ' kg';
   const deltaClass = delta > 0 ? 'danger' : (delta < 0 ? 'success' : '');
 
@@ -1944,16 +1996,16 @@ function weightChart(days) {
           '<div class="chart-title">Peso corporal</div>' +
           '<div class="chart-subtitle">Últimos ' + days + ' días &middot; ' + entries.length + ' registros</div>' +
         '</div>' +
-        '<span class="badge ' + deltaClass + '">' + esc(deltaLabel) + '</span>' +
+        '<span class="badge ' + deltaClass + '">' + deltaIcon + ' ' + esc(deltaLabel) + '</span>' +
       '</div>' +
       '<div class="chart-wrap">' +
         '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
           '<text class="value-label" x="' + padLeft + '" y="12">Max ' + max + ' kg</text>' +
           '<line class="axis-line" x1="' + padLeft + '" y1="' + (padTop + chartH) + '" x2="' + (W - padRight) + '" y2="' + (padTop + chartH) + '"/>' +
+          trendLine +
           bars +
           '<text class="value-label" x="' + padLeft + '" y="' + (padTop + chartH + 14) + '">Min ' + min + ' kg</text>' +
-          '<text class="axis-label" x="' + padLeft + '" y="' + (H - 4) + '">' + esc(fmtDate(entries[0].date)) + '</text>' +
-          '<text class="axis-label" x="' + (W - padRight) + '" y="' + (H - 4) + '" text-anchor="end">' + esc(fmtDate(entries[entries.length - 1].date)) + '</text>' +
+          dateAxisLabels +
         '</svg>' +
       '</div>' +
     '</div>';
