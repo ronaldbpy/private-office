@@ -925,7 +925,8 @@ const FOOD_DB = [
   { id: 'nueces', nombre: 'Nueces', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 654, prot: 15.0, carb: 14.0, grasa: 65.0 }, cocido_100g: { kcal: 654.0, prot: 15.0, carb: 14.0, grasa: 65.0 }, notas: 'Omega-3 vegetal' },
   { id: 'mct_oil', nombre: 'MCT oil C8', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 830, prot: 0.0, carb: 0.0, grasa: 100.0 }, cocido_100g: { kcal: 830.0, prot: 0.0, carb: 0.0, grasa: 100.0 }, notas: 'Para ayuno limpio en el espresso' },
   { id: 'cacao', nombre: 'Cacao puro en polvo', categoria: 'Otro', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 228, prot: 20.0, carb: 58.0, grasa: 14.0 }, cocido_100g: { kcal: 228.0, prot: 20.0, carb: 58.0, grasa: 14.0 }, notas: 'Sin azúcar; fibra alta' },
-  { id: 'chia', nombre: 'Semillas de chía', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 486, prot: 17.0, carb: 42.0, grasa: 31.0 }, cocido_100g: { kcal: 486.0, prot: 17.0, carb: 42.0, grasa: 31.0 }, notas: 'Fibra ~34 g/100 g' }
+  { id: 'chia', nombre: 'Semillas de chía', categoria: 'Grasa', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 486, prot: 17.0, carb: 42.0, grasa: 31.0 }, cocido_100g: { kcal: 486.0, prot: 17.0, carb: 42.0, grasa: 31.0 }, notas: 'Fibra ~34 g/100 g' },
+  { id: 'coca_zero', nombre: 'Coca Cola Zero', categoria: 'Bebida', metodo_coccion: 'listo', factor_cocido_sobre_crudo: 1.0, crudo_100g: { kcal: 0.4, prot: 0.0, carb: 0.1, grasa: 0.0 }, cocido_100g: { kcal: 0.4, prot: 0.0, carb: 0.1, grasa: 0.0 }, notas: 'Per 100ml; use as beverage, not meal' }
 ];
 
 // --------------------------------------------------------------------------
@@ -1359,7 +1360,7 @@ function handleMealSubmit(e) {
   const mealId = mealBuilderState.mealId || ('m_' + Date.now());
   const meal = {
     id: mealId,
-    name: food.nombre + ' (' + grams + 'g ' + (isCocido ? 'cocido' : 'crudo') + ')',
+    name: (food.nombre || food.name || food.id) + ' (' + grams + 'g ' + (isCocido ? 'cocido' : 'crudo') + ')',
     foodId: food.id,
     gramos: grams,
     isCocido: isCocido,
