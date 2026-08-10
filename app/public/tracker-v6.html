@@ -1036,7 +1036,7 @@ function today() {
 // not part of Task 3's Step 1 function list but needed so rec() has a
 // concrete, reusable shape to create when a date has no record yet.
 function blank(date) {
-  return { date: date, meals: [], peptides: [], checkin: null, hydration: [], medications: [] };
+  return { date: date, meals: [], peptides: [], checkin: null, hydration: [], medications: [], tomas: [] };
 }
 
 // rec(date) → get the record for `date` (defaults to today()) from
@@ -1836,7 +1836,10 @@ function dashboard() {
       medicationsItemsHtml +
     '</div>';
 
-  return hero + quickActions + statsGrid + mealListSection + peptidesSection + checkinSection + hydrationSection + medicationsSection;
+  // Tomas de hoy section (doctor-prescribed medications with hourly schedule)
+  const tomasSection = tomasDehoyHtml();
+
+  return hero + quickActions + statsGrid + mealListSection + peptidesSection + checkinSection + hydrationSection + tomasSection + medicationsSection;
 }
 
 // delMeal(index) → removes a single meal from the currently viewed day's
@@ -3519,6 +3522,292 @@ function seedDemoData() {
 }
 
 // --------------------------------------------------------------------------
+// MEDICATIONS WITH REMINDERS (Task: Doctor Prescription Import)
+// Imports doctor-prescribed medications from JSON, creates recurring doses,
+// schedules Service Worker notifications, manages "Tomas de hoy" UI.
+// --------------------------------------------------------------------------
+
+// importDoctorMedications(medicationsArray) → batch import of doctor-prescribed
+// medications into state, keyed by medication ID. Creates recurring dose entries
+// for today through fecha_fin based on horarios schedule. Schedules Service
+// Worker notifications and updates "Tomas de hoy" display.
+function importDoctorMedications(medicationsArray) {
+  if (!medicationsArray || !Array.isArray(medicationsArray)) return;
+
+  // Initialize medications registry if not present
+  if (!state.medications) state.medications = {};
+
+  const todayDate = today();
+  medicationsArray.forEach(med => {
+    if (!med.id || !med.nombre) return;
+
+    // Validate active dates
+    const fechaInicio = med.fecha_inicio || todayDate;
+    const fechaFin = med.fecha_fin || null;
+
+    // Skip if today is before start or after end
+    if (todayDate < fechaInicio) return;
+    if (fechaFin && todayDate > fechaFin) return;
+
+    // Store medication metadata in state.medications
+    state.medications[med.id] = {
+      id: med.id,
+      nombre: med.nombre,
+      dosis: med.dosis,
+      frecuencia: med.frecuencia,
+      duracion_dias: med.duracion_dias,
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
+      horarios: med.horarios || [],
+      via: med.via || 'oral',
+      estado: med.estado || 'activo'
+    };
+
+    // Add medication doses to today's record if active
+    if (med.estado === 'activo' && med.horarios && Array.isArray(med.horarios)) {
+      const dayRec = rec(todayDate);
+      if (!dayRec.medications) dayRec.medications = [];
+
+      med.horarios.forEach(hora => {
+        // Check if already logged for this hour
+        const exists = dayRec.medications.some(m => m.id === med.id + '_' + hora);
+        if (!exists) {
+          dayRec.medications.push({
+            id: med.id + '_' + hora,
+            medicationId: med.id,
+            nombre: med.nombre,
+            dosis: med.dosis,
+            frecuencia: med.frecuencia,
+            horarios: med.horarios,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin,
+            via: med.via || 'oral',
+            estado: 'pendiente', // pending, taken, missed
+            horario: hora,
+            timestamp: null
+          });
+        }
+      });
+    }
+  });
+
+  save();
+  scheduleNotificationsForToday();
+  if (typeof render === 'function') render();
+}
+
+// scheduleNotificationsForToday() → registers Service Worker notifications
+// for each medication dose scheduled for today.
+function scheduleNotificationsForToday() {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+
+  const todayDate = today();
+  const dayRec = rec(todayDate);
+  if (!dayRec.medications || dayRec.medications.length === 0) return;
+
+  // Request notification permission if not already granted
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        scheduleNotificationsForToday();
+      }
+    });
+    return;
+  }
+
+  // Schedule notifications for each dose
+  dayRec.medications.forEach(med => {
+    if (med.estado === 'tomado' || !med.horario) return;
+
+    const [h, m] = med.horario.split(':').map(Number);
+    const now = new Date();
+    const notifTime = new Date();
+    notifTime.setHours(h, m, 0, 0);
+
+    // Only schedule if time hasn't passed yet
+    if (notifTime > now) {
+      const delayMs = notifTime.getTime() - now.getTime();
+      setTimeout(() => {
+        if (Notification.permission === 'granted') {
+          new Notification('Medicamento · ' + med.horario, {
+            tag: med.id,
+            requireInteraction: true,
+            body: 'Toma: ' + med.nombre + ' · ' + med.dosis + ' · Vía ' + med.via,
+            icon: '/tracker/icon-192.png',
+            data: { medicationId: med.medicationId, horario: med.horario }
+          });
+        }
+      }, delayMs);
+    }
+  });
+}
+
+// autodeactivateMedications() → daily check: deactivate medications where
+// today > fecha_fin. Called on app startup and periodically.
+function autodeactivateMedications() {
+  const todayDate = today();
+  if (!state.medications) return;
+
+  Object.keys(state.medications).forEach(medId => {
+    const med = state.medications[medId];
+    if (med.fecha_fin && todayDate > med.fecha_fin && med.estado === 'activo') {
+      med.estado = 'finalizado';
+      // Remove from today's record as well
+      const dayRec = rec(todayDate);
+      if (dayRec.medications) {
+        dayRec.medications = dayRec.medications.filter(m => m.medicationId !== medId);
+      }
+    }
+  });
+
+  save();
+}
+
+// getTtomasDeHoy() → returns array of today's medication doses sorted by hora,
+// formatted for UI display. Includes metadata for checkbox binding.
+function getTtomasDeHoy() {
+  const todayDate = today();
+  const dayRec = rec(todayDate);
+  if (!dayRec.medications || dayRec.medications.length === 0) return [];
+
+  // Sort by hora (HH:MM)
+  const sorted = (dayRec.medications || []).slice().sort((a, b) => {
+    const [ah] = a.horario.split(':').map(Number);
+    const [bh] = b.horario.split(':').map(Number);
+    return ah - bh;
+  });
+
+  return sorted;
+}
+
+// markMedicationTaken(medicationId, hora) → mark a specific dose as taken,
+// record timestamp, persist.
+function markMedicationTaken(medicationId, hora) {
+  const todayDate = today();
+  const dayRec = rec(todayDate);
+  if (!dayRec.medications) return;
+
+  const med = dayRec.medications.find(m => m.id === medicationId + '_' + hora);
+  if (med) {
+    med.estado = 'tomado';
+    med.timestamp = new Date().toISOString();
+    save();
+    if (typeof render === 'function') render();
+  }
+}
+
+// markMedicationUntaken(medicationId, hora) → toggle back to pending.
+function markMedicationUntaken(medicationId, hora) {
+  const todayDate = today();
+  const dayRec = rec(todayDate);
+  if (!dayRec.medications) return;
+
+  const med = dayRec.medications.find(m => m.id === medicationId + '_' + hora);
+  if (med) {
+    med.estado = 'pendiente';
+    med.timestamp = null;
+    save();
+    if (typeof render === 'function') render();
+  }
+}
+
+// tomasDehoyHtml() → renders "Tomas de hoy" card for dashboard with all
+// scheduled doses, checkboxes, and edit/delete actions.
+function tomasDehoyHtml() {
+  const tomas = getTtomasDeHoy();
+  const viewDate = currentDate || today();
+
+  if (tomas.length === 0) {
+    return '' +
+      '<div class="card">' +
+        '<div class="card-header"><h3>Tomas de hoy</h3></div>' +
+        '<div class="banner info text-center">Sin medicamentos programados para hoy</div>' +
+      '</div>';
+  }
+
+  const itemsHtml = tomas.map(function (toma) {
+    const hora = toma.horario || '';
+    const isChecked = toma.estado === 'tomado';
+    const checkboxId = 'med_' + toma.medicationId + '_' + toma.horario;
+    return '' +
+      '<div class="list-item" style="align-items:flex-start;">' +
+        '<input type="checkbox" id="' + checkboxId + '" ' + (isChecked ? 'checked' : '') + ' ' +
+          'onchange="if(this.checked) markMedicationTaken(\'' + esc(toma.medicationId) + '\', \'' + esc(toma.horario) + '\'); ' +
+          'else markMedicationUntaken(\'' + esc(toma.medicationId) + '\', \'' + esc(toma.horario) + '\');" ' +
+          'style="margin-right:var(--space-2); margin-top:2px; width:20px; height:20px; cursor:pointer;">' +
+        '<label for="' + checkboxId + '" style="flex:1; cursor:pointer;">' +
+          '<div class="item-main">' +
+            '<div class="item-title" style="' + (isChecked ? 'opacity:0.6;text-decoration:line-through;' : '') + '">' +
+              hora + ' — ' + esc(toma.nombre) + '</div>' +
+            '<div class="item-sub">' + esc(toma.dosis) + ' · Vía ' + esc(toma.via) + '</div>' +
+          '</div>' +
+        '</label>' +
+      '</div>';
+  }).join('');
+
+  return '' +
+    '<div class="card">' +
+      '<div class="card-header"><h3>Tomas de hoy · ' + esc(viewDate) + '</h3><span class="badge primary">' + tomas.length + '</span></div>' +
+      itemsHtml +
+    '</div>';
+}
+
+// --------------------------------------------------------------------------
+// TEST/DEMO DATA — Doctor prescription medications (2026-08-10)
+// Can be imported via console: importDoctorMedications(DOCTOR_MEDICATIONS_2026_08_10)
+// --------------------------------------------------------------------------
+const DOCTOR_MEDICATIONS_2026_08_10 = [
+  {
+    id: 'dioxaflex-b12',
+    nombre: 'DIOXAFLEX B12',
+    dosis: '1 comprimido',
+    frecuencia: 'cada 8 h',
+    duracion_dias: 5,
+    fecha_inicio: '2026-08-10',
+    fecha_fin: '2026-08-14',
+    horarios: ['08:00', '16:00', '00:00'],
+    via: 'oral',
+    estado: 'activo'
+  },
+  {
+    id: 'realta-30',
+    nombre: 'REALTA 30 mg',
+    dosis: '1 comprimido',
+    frecuencia: '1 vez/día',
+    duracion_dias: null,
+    fecha_inicio: '2026-08-10',
+    fecha_fin: null,
+    horarios: ['20:00'],
+    via: 'oral',
+    estado: 'activo'
+  },
+  {
+    id: 'cesalgin-gesic',
+    nombre: 'CESALGIN GESIC',
+    dosis: '1 comprimido',
+    frecuencia: 'cada 8 h',
+    duracion_dias: 8,
+    fecha_inicio: '2026-08-10',
+    fecha_fin: '2026-08-17',
+    horarios: ['08:00', '16:00', '00:00'],
+    via: 'oral',
+    estado: 'activo'
+  },
+  {
+    id: 'arcoxia-90',
+    nombre: 'ARCOXIA 90 mg',
+    dosis: '1 comprimido',
+    frecuencia: '1 vez/día con desayuno',
+    duracion_dias: 14,
+    fecha_inicio: '2026-08-10',
+    fecha_fin: '2026-08-23',
+    horarios: ['08:00'],
+    via: 'oral',
+    estado: 'activo'
+  }
+];
+
+// --------------------------------------------------------------------------
 // INIT — bootstraps the app once the data layer + all views are defined.
 // --------------------------------------------------------------------------
 applyStoredTheme();
@@ -3526,8 +3815,12 @@ state = load();
 if (Object.keys(state.records).length === 0) {
   migrateFromV5();
 }
+autodeactivateMedications();
 attachEventListeners();
 render();
+
+// Log test command for user
+console.log('[tracker-v6] To import doctor medications, run: importDoctorMedications(DOCTOR_MEDICATIONS_2026_08_10)');
 </script>
 <script src="/tracker/nutrition-db.js"></script>
 </body>
