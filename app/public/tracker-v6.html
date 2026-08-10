@@ -1411,6 +1411,71 @@ function deleteMeal(mealId) {
   }
 }
 
+// editPeptide(peptideId) → opens the peptide modal with the peptide data
+// pre-filled from the current record
+function editPeptide(peptideId) {
+  const peptide = rec().peptides.find(function (p) { return p.id === peptideId; });
+  if (!peptide) return;
+  openPeptideModal();
+  setTimeout(function() {
+    const select = document.getElementById('peptideSelect');
+    const doseInput = document.getElementById('peptideDose');
+    const timeInput = document.getElementById('peptideTime');
+    if (select) select.value = peptide.peptideId;
+    if (doseInput) doseInput.value = n(peptide.dose);
+    if (timeInput) timeInput.value = peptide.time || '';
+    renderPeptideHint(peptide.peptideId);
+  }, 50);
+  // Mark this as an edit by storing the peptideId
+  if (typeof mealBuilderState !== 'undefined') {
+    // Reuse similar state tracking if needed, or create peptideBuilderState
+  }
+}
+
+// deletePeptide(peptideId) → removes a peptide injection entry from
+// today's rec().peptides, with confirmation dialog
+function deletePeptide(peptideId) {
+  const peptide = rec().peptides.find(function (p) { return p.id === peptideId; });
+  if (!peptide) return;
+  if (confirm('¿Eliminar inyección de ' + peptide.nombre + '?')) {
+    rec().peptides = rec().peptides.filter(function (p) { return p.id !== peptideId; });
+    save();
+    if (typeof render === 'function') render();
+  }
+}
+
+// deleteCheckin() → removes the daily check-in record with confirmation
+function deleteCheckin() {
+  const day = rec(currentDate || today());
+  if (!day.checkin) return;
+  if (confirm('¿Eliminar el check-in de hoy?')) {
+    day.checkin = null;
+    save();
+    if (typeof render === 'function') render();
+  }
+}
+
+// editHydration(index) → opens the hydration modal (currently just opens
+// the modal; pre-fill logic would go here if needed)
+function editHydration(index) {
+  const day = rec(currentDate || today());
+  if (!day.hydration || index < 0 || index >= day.hydration.length) return;
+  openHydrationModal();
+  // In a full implementation, you'd pre-fill the modal with day.hydration[index]
+}
+
+// deleteHydration(index) → removes a hydration entry by index with confirmation
+function deleteHydration(index) {
+  const day = rec(currentDate || today());
+  if (!day.hydration || index < 0 || index >= day.hydration.length) return;
+  const entry = day.hydration[index];
+  if (confirm('¿Eliminar ' + entry.name + '?')) {
+    day.hydration.splice(index, 1);
+    save();
+    if (typeof render === 'function') render();
+  }
+}
+
 // --------------------------------------------------------------------------
 // PLACEHOLDER VIEWS (Task 8 glue — Tasks 6/7/9 replace these)
 // dashboard(), analyticsView(), and showSettings() below are intentionally
@@ -1641,9 +1706,12 @@ function dashboard() {
               '<div class="item-sub">P' + n(m.prot).toFixed(0) + ' &middot; C' + n(m.carb).toFixed(0) +
                 ' &middot; G' + n(m.fat).toFixed(0) + ' &middot; ' + Math.round(n(m.kcal)) + ' kcal</div>' +
             '</div>' +
-            '<div class="item-meta">' + esc(time) + '</div>' +
-            '<div class="item-actions">' +
-              '<button type="button" class="remove" onclick="delMeal(' + i + ')" aria-label="Eliminar comida">&times;</button>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span class="item-meta">' + esc(time) + '</span>' +
+              '<div class="item-actions">' +
+                '<button type="button" class="btn sm secondary" style="margin:0 4px;" onclick="editMeal(\'' + esc(m.id) + '\')" aria-label="Editar comida">✎</button>' +
+                '<button type="button" class="btn sm secondary" onclick="deleteMeal(\'' + esc(m.id) + '\')" aria-label="Eliminar comida">✕</button>' +
+              '</div>' +
             '</div>' +
           '</div>';
       }).join('')
@@ -1655,7 +1723,90 @@ function dashboard() {
       mealItemsHtml +
     '</div>';
 
-  return hero + quickActions + statsGrid + mealListSection;
+  // Peptides section (inyecciones)
+  const peptides = day.peptides || [];
+  const peptidesItemsHtml = peptides.length
+    ? peptides.map(function (p, i) {
+        return '' +
+          '<div class="list-item">' +
+            '<div class="item-main">' +
+              '<div class="item-title">' + esc(p.nombre) + '</div>' +
+              '<div class="item-sub">' + n(p.dose).toFixed(1) + ' u. · ' + esc(p.time || '') + '</div>' +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span class="item-meta"></span>' +
+              '<div class="item-actions">' +
+                '<button type="button" class="btn sm secondary" style="margin:0 4px;" onclick="editPeptide(\'' + esc(p.id) + '\')" aria-label="Editar inyección">✎</button>' +
+                '<button type="button" class="btn sm secondary" onclick="deletePeptide(\'' + esc(p.id) + '\')" aria-label="Eliminar inyección">✕</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }).join('')
+    : '<div class="banner info text-center">Aún no registras inyecciones para este día</div>';
+
+  const peptidesSection = '' +
+    '<div class="card">' +
+      '<div class="card-header"><h3>Inyecciones &middot; ' + esc(currentDate) + '</h3><span class="badge primary">' + peptides.length + '</span></div>' +
+      peptidesItemsHtml +
+    '</div>';
+
+  // Checkin section
+  const checkin = day.checkin || {};
+  const checkinItemsHtml = (checkin.weight != null || checkin.sleepHours != null || checkin.water != null)
+    ? '' +
+      '<div class="list-item">' +
+        '<div class="item-main">' +
+          '<div class="item-title">Check-in diario</div>' +
+          '<div class="item-sub">' +
+            (checkin.weight != null ? 'Peso: ' + checkin.weight + ' kg · ' : '') +
+            (checkin.sleepHours != null ? 'Sueño: ' + checkin.sleepHours + 'h · ' : '') +
+            (checkin.water != null ? 'Agua: ' + checkin.water + 'L' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+          '<span class="item-meta"></span>' +
+          '<div class="item-actions">' +
+            '<button type="button" class="btn sm secondary" style="margin:0 4px;" onclick="openCheckinModal()" aria-label="Editar check-in">✎</button>' +
+            '<button type="button" class="btn sm secondary" onclick="deleteCheckin()" aria-label="Eliminar check-in">✕</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    : '<div class="banner info text-center">Sin registro de check-in para este día</div>';
+
+  const checkinSection = '' +
+    '<div class="card">' +
+      '<div class="card-header"><h3>Check-in &middot; ' + esc(currentDate) + '</h3></div>' +
+      checkinItemsHtml +
+    '</div>';
+
+  // Hydration section
+  const hydration = day.hydration || [];
+  const hydrationItemsHtml = hydration.length
+    ? hydration.map(function (h, i) {
+        return '' +
+          '<div class="list-item">' +
+            '<div class="item-main">' +
+              '<div class="item-title">' + esc(h.name) + '</div>' +
+              '<div class="item-sub">' + n(h.volume_ml) + ' ml · ' + n(h.hydration_ml) + ' ml (hidratación)</div>' +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span class="item-meta"></span>' +
+              '<div class="item-actions">' +
+                '<button type="button" class="btn sm secondary" style="margin:0 4px;" onclick="editHydration(' + i + ')" aria-label="Editar bebida">✎</button>' +
+                '<button type="button" class="btn sm secondary" onclick="deleteHydration(' + i + ')" aria-label="Eliminar bebida">✕</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }).join('')
+    : '<div class="banner info text-center">Aún no registras bebidas para este día</div>';
+
+  const hydrationSection = '' +
+    '<div class="card">' +
+      '<div class="card-header"><h3>Hidratación &middot; ' + esc(currentDate) + '</h3><span class="badge primary">' + hydration.length + '</span></div>' +
+      hydrationItemsHtml +
+    '</div>';
+
+  return hero + quickActions + statsGrid + mealListSection + peptidesSection + checkinSection + hydrationSection;
 }
 
 // delMeal(index) → removes a single meal from the currently viewed day's
