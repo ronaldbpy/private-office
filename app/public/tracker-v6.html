@@ -1036,7 +1036,7 @@ function today() {
 // not part of Task 3's Step 1 function list but needed so rec() has a
 // concrete, reusable shape to create when a date has no record yet.
 function blank(date) {
-  return { date: date, meals: [], peptides: [], checkin: null, hydration: [] };
+  return { date: date, meals: [], peptides: [], checkin: null, hydration: [], medications: [] };
 }
 
 // rec(date) → get the record for `date` (defaults to today()) from
@@ -1669,6 +1669,8 @@ function dashboard() {
         '<span class="qa-icon">♥</span><span>Check-in</span></button>' +
       '<button type="button" class="btn secondary" onclick="openHydrationModal()">' +
         '<span class="qa-icon">💧</span><span>Beber</span></button>' +
+      '<button type="button" class="btn secondary" onclick="openMedicationModal()">' +
+        '<span class="qa-icon">💊</span><span>Medicamento</span></button>' +
     '</div>';
 
   const statCard = function (label, cls, consumed, target, unit) {
@@ -1806,7 +1808,35 @@ function dashboard() {
       hydrationItemsHtml +
     '</div>';
 
-  return hero + quickActions + statsGrid + mealListSection + peptidesSection + checkinSection + hydrationSection;
+  // Medications section
+  const medications = day.medications || [];
+  const medicationsItemsHtml = medications.length
+    ? medications.map(function (m) {
+        return '' +
+          '<div class="list-item">' +
+            '<div class="item-main">' +
+              '<div class="item-title">' + esc(m.name) + '</div>' +
+              '<div class="item-sub">' + n(m.dose).toFixed(1) + ' ' + esc(m.unit) + ' · ' + esc(m.time) +
+                (m.notes ? ' · ' + esc(m.notes) : '') + '</div>' +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+              '<span class="item-meta"></span>' +
+              '<div class="item-actions">' +
+                '<button type="button" class="btn sm secondary" style="margin:0 4px;" onclick="editMedication(\'' + esc(m.id) + '\')" aria-label="Editar medicamento">✎</button>' +
+                '<button type="button" class="btn sm secondary" onclick="deleteMedication(\'' + esc(m.id) + '\')" aria-label="Eliminar medicamento">✕</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }).join('')
+    : '<div class="banner info text-center">Aún no registras medicamentos para este día</div>';
+
+  const medicationsSection = '' +
+    '<div class="card">' +
+      '<div class="card-header"><h3>Medicamentos &middot; ' + esc(currentDate) + '</h3><span class="badge primary">' + medications.length + '</span></div>' +
+      medicationsItemsHtml +
+    '</div>';
+
+  return hero + quickActions + statsGrid + mealListSection + peptidesSection + checkinSection + hydrationSection + medicationsSection;
 }
 
 // delMeal(index) → removes a single meal from the currently viewed day's
@@ -2137,6 +2167,7 @@ function showSettings() {
           '<button type="button" class="btn secondary block" data-action="export-data">Exportar JSON</button>' +
           '<button type="button" class="btn secondary block" data-action="trigger-import">Importar JSON</button>' +
           '<input type="file" id="importFile" accept="application/json,.json" class="hidden">' +
+          '<button type="button" class="btn secondary block" data-action="import-apple-health">Importar Apple Health</button>' +
           '<button type="button" class="btn danger block" data-action="reset-data">Restablecer datos</button>' +
         '</div>' +
       '</div>' +
@@ -2230,6 +2261,160 @@ function handleAddMedication(e) {
   closeMedicationForm();
   render();
   showSettingsStatus('Medicamento agregado: ' + med.nombre);
+}
+
+// --------------------------------------------------------------------------
+// APPLE HEALTH IMPORT (Phase 3A)
+// Parses Apple Health XML export, extracts weight records (HKQuantityTypeIdentifierBodyMass),
+// deduplicates based on date ±1 day and weight ±0.5kg variance, and merges into
+// state.records as checkin.weight entries.
+// --------------------------------------------------------------------------
+
+// parseAppleHealth(xmlString) → Extract weight records from Apple Health XML.
+// Returns array of {date: 'YYYY-MM-DD', weight: number (kg)}.
+function parseAppleHealth(xmlString) {
+  const weights = [];
+  const regex = /type="HKQuantityTypeIdentifierBodyMass"[^>]*value="([^"]*)"[^>]*startDate="([^"]*)"/g;
+  let match;
+
+  while ((match = regex.exec(xmlString)) !== null) {
+    const weight = n(match[1]);
+    const startDateStr = match[2]; // format: "2026-02-11 11:16:48 -0300"
+
+    // Extract YYYY-MM-DD from "2026-02-11 11:16:48 -0300"
+    const parts = startDateStr.split(' ');
+    const date = parts[0];
+
+    if (weight > 0 && date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      weights.push({ date: date, weight: weight });
+    }
+  }
+
+  return weights;
+}
+
+// mergeAppleHealthWeights(weights) → Deduplicate and merge weights into state.records.
+// Dedup logic: skip a weight if within 1 day and ±0.5kg of an existing record.
+// Merges as checkin.weight entries (won't overwrite existing checins, only adds weight).
+function mergeAppleHealthWeights(weights) {
+  if (!weights || !Array.isArray(weights)) return 0;
+
+  let merged = 0;
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+  weights.forEach(function (w) {
+    if (!w.date || !dateRe.test(w.date) || w.weight <= 0) return;
+
+    // Check for existing records within ±1 day and ±0.5kg
+    const checkDate = new Date(w.date + 'T00:00:00');
+    let isDuplicate = false;
+
+    for (let offset = -1; offset <= 1; offset++) {
+      const testDate = new Date(checkDate);
+      testDate.setDate(testDate.getDate() + offset);
+      const testDateStr = testDate.toISOString().split('T')[0];
+
+      const existingRec = state.records[testDateStr];
+      if (existingRec && existingRec.checkin && existingRec.checkin.weight != null) {
+        const existingWeight = n(existingRec.checkin.weight);
+        if (Math.abs(existingWeight - w.weight) <= 0.5) {
+          isDuplicate = true;
+          break;
+        }
+      }
+    }
+
+    if (!isDuplicate) {
+      if (!state.records[w.date]) {
+        state.records[w.date] = { date: w.date, meals: [], peptides: [], checkin: {} };
+      }
+      if (!state.records[w.date].checkin) {
+        state.records[w.date].checkin = {};
+      }
+      state.records[w.date].checkin.weight = w.weight;
+      state.records[w.date].checkin.savedAt = new Date().toISOString();
+      merged++;
+    }
+  });
+
+  return merged;
+}
+
+// importAppleHealthModal() → HTML for Apple Health import modal
+function importAppleHealthModal() {
+  return '' +
+    '<div class="modal-overlay" id="appleHealthModalOverlay" onclick="if(event.target===this) closeAppleHealthModal()">' +
+      '<div class="modal active" id="appleHealthModal" role="dialog" aria-modal="true" aria-labelledby="appleHealthModalTitle">' +
+        '<div class="modal-header">' +
+          '<h2 id="appleHealthModalTitle">Importar Apple Health</h2>' +
+          '<button type="button" class="modal-close" onclick="closeAppleHealthModal()" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<p class="text-sm muted mb-3">Selecciona el archivo export.xml de tu historial de Apple Health para importar registros de peso.</p>' +
+          '<input type="file" id="appleHealthFile" accept=".xml,application/xml" class="mb-3" style="display:block; width:100%; padding:8px; border:1px solid var(--border); border-radius:6px;">' +
+          '<div id="appleHealthStatus" class="text-sm muted"></div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button type="button" class="btn secondary" onclick="closeAppleHealthModal()">Cancelar</button>' +
+          '<button type="button" class="btn" onclick="doAppleHealthImport()">Importar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// openAppleHealthModal() → Insert modal and wire listeners
+function openAppleHealthModal() {
+  closeAppleHealthModal();
+  document.body.insertAdjacentHTML('beforeend', importAppleHealthModal());
+}
+
+// closeAppleHealthModal() → Remove modal from DOM
+function closeAppleHealthModal() {
+  const overlay = document.getElementById('appleHealthModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+// doAppleHealthImport() → Handle file upload and import
+function doAppleHealthImport() {
+  const fileInput = document.getElementById('appleHealthFile');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  if (!file) {
+    const status = document.getElementById('appleHealthStatus');
+    if (status) status.textContent = 'Por favor, selecciona un archivo.';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const xmlStr = reader.result;
+      const weights = parseAppleHealth(xmlStr);
+
+      if (weights.length === 0) {
+        const status = document.getElementById('appleHealthStatus');
+        if (status) status.textContent = 'No se encontraron registros de peso en el archivo.';
+        return;
+      }
+
+      const merged = mergeAppleHealthWeights(weights);
+      save();
+      closeAppleHealthModal();
+      render();
+
+      showSettingsStatus('Apple Health importado: ' + weights.length + ' registros encontrados, ' + merged + ' agregados.');
+    } catch (err) {
+      console.error('[tracker-v6] doAppleHealthImport() failed', err);
+      const status = document.getElementById('appleHealthStatus');
+      if (status) status.textContent = 'Error al procesar el archivo XML.';
+    }
+  };
+
+  reader.onerror = function () {
+    const status = document.getElementById('appleHealthStatus');
+    if (status) status.textContent = 'No se pudo leer el archivo.';
+  };
+
+  reader.readAsText(file);
 }
 
 function phaseSelector() {
@@ -2349,6 +2534,133 @@ function handleHydrationSubmit(e) {
 function closeHydrationModal() {
   const overlay = document.getElementById('hydrationModalOverlay');
   if (overlay) overlay.remove();
+}
+
+// Medication Modal & Handlers
+function medicationModal() {
+  const html = '' +
+    '<div class="modal-overlay" id="medicationModalOverlay" onclick="if(event.target===this) closeMedicationModal()">' +
+      '<div class="modal active" id="medicationModal" role="dialog" aria-modal="true">' +
+        '<div class="modal-header"><h2>Registrar medicamento</h2>' +
+          '<button type="button" class="modal-close" onclick="closeMedicationModal()">&times;</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<form id="medicationForm" onsubmit="handleMedicationSubmit(event)">' +
+            '<div class="form-group">' +
+              '<label>Nombre del medicamento</label>' +
+              '<input type="text" id="medicationName" placeholder="ej. Tramadol" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Dosis</label>' +
+              '<input type="number" id="medicationDose" inputmode="decimal" step="0.1" placeholder="50" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Unidad</label>' +
+              '<input type="text" id="medicationUnit" placeholder="mg" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Hora</label>' +
+              '<input type="time" id="medicationTime" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Notas (opcional)</label>' +
+              '<textarea id="medicationNotes" placeholder="Observaciones..." rows="3"></textarea>' +
+            '</div>' +
+            '<div class="form-actions">' +
+              '<button type="submit" class="btn block">Registrar</button>' +
+              '<button type="button" class="btn secondary block" onclick="closeMedicationModal()">Cancelar</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  return html;
+}
+
+function openMedicationModal() {
+  const overlay = document.getElementById('medicationModalOverlay');
+  if (overlay) overlay.remove();
+  document.body.insertAdjacentHTML('beforeend', medicationModal());
+  document.getElementById('medicationForm').addEventListener('submit', handleMedicationSubmit);
+}
+
+function closeMedicationModal() {
+  const overlay = document.getElementById('medicationModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+function handleMedicationSubmit(e) {
+  e.preventDefault();
+  const name = (document.getElementById('medicationName').value || '').trim();
+  const dose = n(document.getElementById('medicationDose').value);
+  const unit = (document.getElementById('medicationUnit').value || '').trim();
+  const time = (document.getElementById('medicationTime').value || '').trim();
+  const notes = (document.getElementById('medicationNotes').value || '').trim();
+
+  if (!name || dose <= 0 || !unit || !time) return;
+
+  const day = rec(currentDate);
+  if (!day.medications) day.medications = [];
+
+  // Dedup by name: replace if same medication name already exists
+  const existingIndex = day.medications.findIndex(function(m) {
+    return m.name.toLowerCase() === name.toLowerCase();
+  });
+
+  const medId = 'med_' + Date.now();
+  const medication = {
+    id: medId,
+    name: name,
+    dose: dose,
+    unit: unit,
+    time: time,
+    notes: notes
+  };
+
+  if (existingIndex >= 0) {
+    day.medications[existingIndex] = medication;
+  } else {
+    day.medications.push(medication);
+  }
+
+  save();
+  closeMedicationModal();
+  render();
+}
+
+function editMedication(medId) {
+  const day = rec(currentDate);
+  if (!day.medications) return;
+  const med = day.medications.find(function(m) { return m.id === medId; });
+  if (!med) return;
+
+  // Remove old entry
+  day.medications = day.medications.filter(function(m) { return m.id !== medId; });
+  save();
+
+  // Open modal and pre-fill (would need to enhance modal to pre-populate)
+  openMedicationModal();
+  // Pre-fill the form
+  setTimeout(function() {
+    document.getElementById('medicationName').value = med.name;
+    document.getElementById('medicationDose').value = med.dose;
+    document.getElementById('medicationUnit').value = med.unit;
+    document.getElementById('medicationTime').value = med.time;
+    document.getElementById('medicationNotes').value = med.notes || '';
+  }, 0);
+}
+
+function deleteMedication(medId) {
+  const day = rec(currentDate);
+  if (!day.medications) return;
+  const med = day.medications.find(function(m) { return m.id === medId; });
+  if (!med) return;
+
+  if (confirm('¿Eliminar ' + med.name + '?')) {
+    day.medications = day.medications.filter(function(m) { return m.id !== medId; });
+    save();
+    if (typeof render === 'function') render();
+  }
 }
 
 // setPhase(phaseId) → switches state.selectedPhase and re-derives
@@ -2652,6 +2964,8 @@ function attachEventListeners() {
     } else if (action === 'trigger-import') {
       const importInput = document.getElementById('importFile');
       if (importInput) importInput.click();
+    } else if (action === 'import-apple-health') {
+      openAppleHealthModal();
     } else if (action === 'reset-data') {
       handleResetClick();
     }
