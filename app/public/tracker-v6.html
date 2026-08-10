@@ -884,7 +884,8 @@ const HYDRATION_DB = [
   { id: 'coffee_black', name: 'Café', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
   { id: 'tea_green', name: 'Té verde', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
   { id: 'tea_black', name: 'Té negro', category: 'Cafeína', volume_ml: 200, kcal: 2, hydration_ml: 190 },
-  { id: 'herbal_tea', name: 'Infusión', category: 'Herbal', volume_ml: 200, kcal: 0, hydration_ml: 200 }
+  { id: 'herbal_tea', name: 'Infusión', category: 'Herbal', volume_ml: 200, kcal: 0, hydration_ml: 200 },
+  { id: 'coca_zero', name: 'Coca Cola Zero', category: 'Refrescos', volume_ml: 250, kcal: 1, hydration_ml: 240 }
 ];
 
 // --------------------------------------------------------------------------
@@ -1186,6 +1187,7 @@ function mealBuilderModal() {
   const foodSource = (typeof NUTRITION_DB !== 'undefined' && NUTRITION_DB.foods && Array.isArray(NUTRITION_DB.foods)) ? NUTRITION_DB.foods : FOOD_DB;
   const foodOptions = (Array.isArray(foodSource) ? foodSource : FOOD_DB)
     .slice()
+    .filter(function (f) { return f.categoria !== 'Bebida' && f.category !== 'Bebida'; })
     .sort(function (a, b) {
       const nameA = a.nombre || a.name || '';
       const nameB = b.nombre || b.name || '';
