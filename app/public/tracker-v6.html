@@ -3862,9 +3862,10 @@ function scheduleNotificationsForToday() {
 
   // Schedule notifications for each dose
   dayRec.medications.forEach(med => {
-    if (med.estado === 'tomado' || !med.horario) return;
+    const medTime = med.time || med.horario;
+    if (med.estado === 'tomado' || !medTime) return;
 
-    const [h, m] = med.horario.split(':').map(Number);
+    const [h, m] = medTime.split(':').map(Number);
     const now = new Date();
     const notifTime = new Date();
     notifTime.setHours(h, m, 0, 0);
@@ -3874,12 +3875,12 @@ function scheduleNotificationsForToday() {
       const delayMs = notifTime.getTime() - now.getTime();
       setTimeout(() => {
         if (Notification.permission === 'granted') {
-          new Notification('Medicamento · ' + med.horario, {
+          new Notification('Medicamento · ' + medTime, {
             tag: med.id,
             requireInteraction: true,
             body: 'Toma: ' + med.nombre + ' · ' + med.dosis + ' · Vía ' + med.via,
             icon: '/tracker/icon-192.png',
-            data: { medicationId: med.medicationId, horario: med.horario }
+            data: { medicationId: med.medicationId, time: medTime }
           });
         }
       }, delayMs);
@@ -3915,10 +3916,12 @@ function getTtomasDeHoy() {
   const dayRec = rec(todayDate);
   if (!dayRec.medications || dayRec.medications.length === 0) return [];
 
-  // Sort by hora (HH:MM)
+  // Sort by time (HH:MM) — use 'time' field from imported medications
   const sorted = (dayRec.medications || []).slice().sort((a, b) => {
-    const [ah] = a.horario.split(':').map(Number);
-    const [bh] = b.horario.split(':').map(Number);
+    const aTime = a.time || a.horario || '00:00';
+    const bTime = b.time || b.horario || '00:00';
+    const [ah] = aTime.split(':').map(Number);
+    const [bh] = bTime.split(':').map(Number);
     return ah - bh;
   });
 
@@ -3971,9 +3974,9 @@ function tomasDehoyHtml() {
   }
 
   const itemsHtml = tomas.map(function (toma) {
-    const hora = toma.horario || '';
+    const hora = toma.time || toma.horario || '';
     const isChecked = toma.estado === 'tomado';
-    const checkboxId = 'med_' + toma.medicationId + '_' + toma.horario;
+    const checkboxId = 'med_' + toma.medicationId + '_' + hora;
     return '' +
       '<div class="list-item" style="align-items:flex-start;">' +
         '<input type="checkbox" id="' + checkboxId + '" ' + (isChecked ? 'checked' : '') + ' ' +
