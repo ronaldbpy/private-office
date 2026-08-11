@@ -18,12 +18,31 @@ self.addEventListener('fetch', ev => {
   if (!url.pathname.startsWith('/tracker/')) return;
   if (ev.request.method !== 'GET') return;
 
-  ev.respondWith(
-    (url.pathname.endsWith('tracker-v6.html') || url.pathname.endsWith('/tracker/')
-      ? fetch(ev.request).then(r => r.ok ? (caches.open(CACHE).then(c => c.put(ev.request, r.clone())), r) : caches.match(ev.request))
-      : caches.match(ev.request).then(r => r || fetch(ev.request).then(f => f.ok ? (caches.open(CACHE).then(c => c.put(ev.request, f.clone())), f) : f))
-    ).catch(() => caches.match('/tracker/tracker-v6.html'))
-  );
+  // For HTML pages: network first, fallback to cache
+  if (url.pathname.endsWith('tracker-v6.html') || url.pathname.endsWith('/tracker/')) {
+    ev.respondWith(
+      fetch(ev.request)
+        .then(r => {
+          if (!r.ok) return caches.match(ev.request);
+          caches.open(CACHE).then(c => c.put(ev.request, r.clone())).catch(() => {});
+          return r;
+        })
+        .catch(() => caches.match(ev.request) || caches.match('/tracker/tracker-v6.html'))
+    );
+  } else {
+    // For assets: cache first, fallback to network
+    ev.respondWith(
+      caches.match(ev.request)
+        .then(r => r || fetch(ev.request)
+          .then(f => {
+            if (!f.ok) return f;
+            caches.open(CACHE).then(c => c.put(ev.request, f.clone())).catch(() => {});
+            return f;
+          })
+        )
+        .catch(() => caches.match('/tracker/tracker-v6.html'))
+    );
+  }
 });
 
 // ========================================================================
