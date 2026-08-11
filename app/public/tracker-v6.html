@@ -3917,10 +3917,13 @@ function getTtomasDeHoy() {
   const dayRec = rec(todayDate);
   if (!dayRec.medications || dayRec.medications.length === 0) return [];
 
-  // Sort by time (HH:MM) — use 'time' field from imported medications
-  const sorted = (dayRec.medications || []).slice().sort((a, b) => {
-    const aTime = a.time || a.horario || '00:00';
-    const bTime = b.time || b.horario || '00:00';
+  // Filter out medications without time, then sort by time (HH:MM)
+  const validTomas = (dayRec.medications || []).filter(m => m && (m.time || m.horario));
+  if (validTomas.length === 0) return [];
+
+  const sorted = validTomas.slice().sort((a, b) => {
+    const aTime = (a.time || a.horario || '00:00').toString();
+    const bTime = (b.time || b.horario || '00:00').toString();
     const [ah] = aTime.split(':').map(Number);
     const [bh] = bTime.split(':').map(Number);
     return ah - bh;
