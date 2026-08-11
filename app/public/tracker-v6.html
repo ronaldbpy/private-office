@@ -4078,7 +4078,14 @@ try {
 
   updateDebug('render...');
   console.log('[INIT] render...');
-  render();
+  try {
+    render();
+    updateDebug('render OK');
+  } catch (e) {
+    updateDebug('render ERROR: ' + e.message);
+    console.error('[INIT] render failed:', e.message, e.stack);
+    throw e;
+  }
 
   updateDebug('autodeactivateMedications...');
   console.log('[INIT] autodeactivateMedications...');
