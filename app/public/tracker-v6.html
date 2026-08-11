@@ -791,10 +791,13 @@
 // Scope is /tracker/ to match the deployed path on Bluehost
 // (public_html/tracker/), where this file is uploaded as index.html.
 // ==========================================================================
+// Service Worker temporarily disabled for debugging
+/*
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/tracker/tracker-sw.js', { scope: '/tracker/' })
     .catch(e => console.log('SW registration failed:', e));
 }
+*/
 
 // ==========================================================================
 // TRACKER v6.0 — DATA LAYER (Task 1: Data Schema & Embedded Databases)
@@ -4054,14 +4057,27 @@ const DOCTOR_MEDICATIONS_2026_08_10 = [
 // --------------------------------------------------------------------------
 // INIT — bootstraps the app once the data layer + all views are defined.
 // --------------------------------------------------------------------------
-applyStoredTheme();
-state = load();
-if (Object.keys(state.records).length === 0) {
-  migrateFromV5();
+console.log('[INIT] Starting app initialization');
+try {
+  console.log('[INIT] applyStoredTheme...');
+  applyStoredTheme();
+  console.log('[INIT] load...');
+  state = load();
+  console.log('[INIT] state loaded, records:', Object.keys(state.records || {}).length);
+  if (Object.keys(state.records).length === 0) {
+    console.log('[INIT] migrateFromV5...');
+    migrateFromV5();
+  }
+  console.log('[INIT] attachEventListeners...');
+  attachEventListeners();
+  console.log('[INIT] render...');
+  render();
+  console.log('[INIT] autodeactivateMedications...');
+  autodeactivateMedications();
+  console.log('[INIT] ✓ App initialized successfully');
+} catch (e) {
+  console.error('[INIT] ERROR:', e.message, e.stack);
 }
-autodeactivateMedications();
-attachEventListeners();
-render();
 
 // Log test command for user
 console.log('[tracker-v6] To import doctor medications, run: importDoctorMedications(DOCTOR_MEDICATIONS_2026_08_10)');
