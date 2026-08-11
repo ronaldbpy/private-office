@@ -111,9 +111,10 @@ async function autoLoadPrescriptionMedications() {
       return;
     }
 
-    // Query API for medications
-    const response = await fetch('/api/tracker/preset-medications');
-    if (!response.ok) return;
+    // Query API for medications — disabled (no endpoint)
+    // const response = await fetch('/api/tracker/preset-medications');
+    // if (!response.ok) return;
+    return; // Skip API call
 
     const data = await response.json();
     const medications = data.medications || [];
@@ -151,13 +152,15 @@ async function autoLoadPrescriptionMedications() {
  */
 async function loadHealthDataAndRender() {
   try {
-    const date = currentDate || today();
-    const response = await fetch(`/api/tracker/health-sync?date=${encodeURIComponent(date)}`);
-
-    if (!response.ok) {
-      console.warn('[tracker-health] Failed to load health data');
-      return;
-    }
+    // Disabled: no health-sync endpoint configured
+    console.log('[tracker-health] Health data sync disabled (no endpoint)');
+    return;
+    // const date = currentDate || today();
+    // const response = await fetch(`/api/tracker/health-sync?date=${encodeURIComponent(date)}`);
+    // if (!response.ok) {
+    //   console.warn('[tracker-health] Failed to load health data');
+    //   return;
+    // }
 
     const data = await response.json();
 
