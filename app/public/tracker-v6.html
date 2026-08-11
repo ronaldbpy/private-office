@@ -4066,6 +4066,8 @@ try {
   try {
     importDoctorMedications(DOCTOR_MEDICATIONS_2026_08_10);
     console.log('[INIT] ✓ Prescription loaded from local data');
+    // Re-render to show newly loaded medications (initial render happened before load)
+    render();
   } catch (e) {
     console.warn('[INIT] Could not load prescription:', e.message);
   }
