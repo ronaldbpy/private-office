@@ -3811,15 +3811,12 @@ function importDoctorMedications(medicationsArray) {
           dayRec.medications.push({
             id: med.id + '_' + hora,
             medicationId: med.id,
-            nombre: med.nombre,
-            dosis: med.dosis,
-            frecuencia: med.frecuencia,
-            horarios: med.horarios,
-            fecha_inicio: fechaInicio,
-            fecha_fin: fechaFin,
-            via: med.via || 'oral',
-            estado: 'pendiente', // pending, taken, missed
-            horario: hora,
+            name: med.nombre,
+            dose: parseFloat(med.dosis) || 0,
+            unit: 'mg',
+            time: hora,
+            notes: med.via || 'oral',
+            estado: 'pendiente',
             timestamp: null
           });
         }
