@@ -1178,13 +1178,32 @@ function rec(date) {
   return state.records[date];
 }
 
-// save() → persist the whole app state to localStorage under the v6 key.
+// save() → persist app state to localStorage + sync to server
 function save() {
+  const date = currentDate || today();
+  const day = state.records[date];
+
   try {
     localStorage.setItem('rb_tracker_v6', JSON.stringify(state));
   } catch (e) {
-    console.error('[tracker-v6] save() failed', e);
+    console.error('[tracker-v6] save() localStorage failed', e);
   }
+
+  // Sync to server
+  fetch('/api/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: date,
+      meals: day.meals || [],
+      medications: day.medications || [],
+      checkins: day.checkin || null,
+      weights: day.weights || []
+    })
+  }).catch(function(e) {
+    console.warn('[tracker-v6] sync to server failed', e);
+  });
+
   return state;
 }
 
