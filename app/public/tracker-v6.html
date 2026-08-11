@@ -289,13 +289,13 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    min-height: var(--touch-target);
-    padding: var(--space-2) var(--space-4);
+    min-height: 48px;
+    padding: var(--space-3) var(--space-5);
     background: linear-gradient(135deg, var(--color-primary) 0%, #0d47a1 100%);
     color: var(--text-on-primary);
     border: none;
     border-radius: var(--radius-md);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     cursor: pointer;
     transition: all var(--transition-base);
@@ -316,8 +316,8 @@
   .btn:active { transform: scale(0.98); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   .btn.block { width: 100%; }
-  .btn.sm { min-height: 36px; padding: var(--space-1) var(--space-3); font-size: 13px; }
-  .btn.lg { min-height: 52px; font-size: 16px; box-shadow: 0 6px 20px rgba(23,92,211,0.4); }
+  .btn.sm { min-height: 40px; padding: var(--space-2) var(--space-3); font-size: 14px; }
+  .btn.lg { min-height: 56px; padding: var(--space-3) var(--space-5); font-size: 16px; box-shadow: 0 6px 20px rgba(23,92,211,0.4); }
   .btn.secondary { background: linear-gradient(135deg, var(--bg-sunken) 0%, var(--bg-elevated) 100%); color: var(--text); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
   .btn.secondary:hover { background: linear-gradient(135deg, var(--border) 0%, var(--border-strong) 100%); box-shadow: 0 6px 16px rgba(0,0,0,0.12); transform: translateY(-1px); }
   .btn.ghost { background: transparent; color: var(--color-primary); }
@@ -397,8 +397,8 @@
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    margin-bottom: var(--space-3);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
     box-shadow: var(--shadow-sm);
   }
   .card-header {
@@ -576,17 +576,17 @@
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: var(--space-3);
-    margin-bottom: var(--space-2);
+    padding: var(--space-4);
+    margin-bottom: var(--space-3);
   }
   .list-item .item-main { flex: 1; min-width: 0; }
-  .list-item .item-title { font-weight: 600; font-size: 14px; }
-  .list-item .item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-  .list-item .item-meta { text-align: right; font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
-  .list-item .item-actions { display: flex; gap: var(--space-1); flex-shrink: 0; }
+  .list-item .item-title { font-weight: 600; font-size: 15px; }
+  .list-item .item-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .list-item .item-meta { text-align: right; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+  .list-item .item-actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
   .list-item .item-actions button {
-    width: 36px; height: 36px; border-radius: 50%; border: none;
-    background: var(--bg-sunken); color: var(--text-muted); cursor: pointer;
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: var(--bg-sunken); color: var(--text-muted); cursor: pointer; font-size: 16px;
   }
   .list-item .item-actions button.remove:hover { background: var(--color-danger-soft); color: var(--color-danger); }
 
@@ -3974,9 +3974,9 @@ function tomasDehoyHtml() {
       '</div>';
   }
 
-  // Filter out medications with undefined name/time, show only valid entries
+  // Show all medications (even if name missing). Filter only removes completely undefined entries
   const validTomas = tomas.filter(function (toma) {
-    return toma.nombre && (toma.time || toma.horario);
+    return toma && (toma.time || toma.horario);
   });
 
   const itemsHtml = validTomas.map(function (toma) {
