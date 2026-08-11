@@ -4057,19 +4057,30 @@ const DOCTOR_MEDICATIONS_2026_08_10 = [
 // --------------------------------------------------------------------------
 console.log('[INIT] Starting app initialization');
 try {
+  updateDebug('applyStoredTheme...');
   console.log('[INIT] applyStoredTheme...');
   applyStoredTheme();
+
+  updateDebug('load...');
   console.log('[INIT] load...');
   state = load();
   console.log('[INIT] state loaded, records:', Object.keys(state.records || {}).length);
+
+  updateDebug('checking migration...');
   if (Object.keys(state.records).length === 0) {
     console.log('[INIT] migrateFromV5...');
     migrateFromV5();
   }
+
+  updateDebug('attachEventListeners...');
   console.log('[INIT] attachEventListeners...');
   attachEventListeners();
+
+  updateDebug('render...');
   console.log('[INIT] render...');
   render();
+
+  updateDebug('autodeactivateMedications...');
   console.log('[INIT] autodeactivateMedications...');
   autodeactivateMedications();
 
