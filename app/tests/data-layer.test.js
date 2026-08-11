@@ -1,4 +1,4 @@
-import { DataStore, PersistenceEngine } from '../public/tracker-layers/data-layer.js';
+import { DataStore, PersistenceEngine, SyncQueue } from '../public/tracker-layers/data-layer.js';
 
 // Mock IndexedDB for test environment
 if (typeof globalThis.indexedDB === 'undefined') {
@@ -112,5 +112,27 @@ describe('PersistenceEngine', () => {
     await engine.save(store);
     const loaded = await engine.load();
     expect(loaded.read('2026-01-01').foods).toEqual(['rice']);
+  });
+});
+
+describe('SyncQueue', () => {
+  test('enqueue adds operation to queue', () => {
+    const queue = new SyncQueue('http://api.test/sync');
+    queue.enqueue({ action: 'save', date: '2026-01-01', data: {} });
+    expect(queue.isPending()).toBe(true);
+  });
+
+  test('offline marks queue offline', () => {
+    const queue = new SyncQueue('http://api.test/sync');
+    queue.enqueue({ action: 'save', date: '2026-01-01', data: {} });
+    queue.offline();
+    expect(queue.isOnline).toBe(false);
+  });
+
+  test('online marks queue online and can flush', () => {
+    const queue = new SyncQueue('http://api.test/sync');
+    queue.offline();
+    queue.online();
+    expect(queue.isOnline).toBe(true);
   });
 });

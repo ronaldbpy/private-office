@@ -99,4 +99,67 @@ class PersistenceEngine {
   }
 }
 
-export { DataStore, PersistenceEngine };
+class SyncQueue {
+  constructor(apiEndpoint = '/api/tracker/sync') {
+    this.apiEndpoint = apiEndpoint;
+    this.queue = [];
+    this.isOnline = navigator?.onLine !== false;
+    this.retryAttempts = {};
+    this.maxRetries = 5;
+    this.backoffMs = [5000, 10000, 30000, 60000, 300000]; // 5s, 10s, 30s, 1m, 5m
+  }
+
+  enqueue(operation) {
+    const op = { ...operation, id: Date.now() + Math.random(), timestamp: Date.now() };
+    this.queue.push(op);
+    if (this.isOnline) {
+      setTimeout(() => this.flush(), 0);
+    }
+  }
+
+  async flush() {
+    if (!this.isOnline || this.queue.length === 0) return;
+
+    const batch = this.queue.splice(0, 10); // Flush in batches of 10
+    for (const op of batch) {
+      try {
+        const response = await fetch(this.apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(op)
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        this.retryAttempts[op.id] = 0;
+      } catch (e) {
+        const attempts = this.retryAttempts[op.id] || 0;
+        if (attempts < this.maxRetries) {
+          this.retryAttempts[op.id] = attempts + 1;
+          const backoff = this.backoffMs[Math.min(attempts, this.backoffMs.length - 1)];
+          setTimeout(() => this.enqueue(op), backoff);
+        } else {
+          console.error('[sync] Operation dropped after max retries:', op);
+        }
+      }
+    }
+    if (this.queue.length > 0) setTimeout(() => this.flush(), 1000);
+  }
+
+  offline() {
+    this.isOnline = false;
+  }
+
+  online() {
+    this.isOnline = true;
+    setTimeout(() => this.flush(), 0);
+  }
+
+  isPending() {
+    return this.queue.length > 0;
+  }
+
+  size() {
+    return this.queue.length;
+  }
+}
+
+export { DataStore, PersistenceEngine, SyncQueue };
