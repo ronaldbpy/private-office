@@ -3992,8 +3992,8 @@ function tomasDehoyHtml() {
         '<label for="' + checkboxId + '" style="flex:1; cursor:pointer;">' +
           '<div class="item-main">' +
             '<div class="item-title" style="' + (isChecked ? 'opacity:0.6;text-decoration:line-through;' : '') + '">' +
-              hora + ' — ' + esc(toma.nombre) + '</div>' +
-            '<div class="item-sub">' + esc(toma.dosis) + ' · Vía ' + esc(toma.via) + '</div>' +
+              hora + ' — ' + esc(toma.name || toma.nombre) + '</div>' +
+            '<div class="item-sub">' + esc(toma.dose || toma.dosis) + ' ' + esc(toma.unit || '') + ' · Vía ' + esc(toma.notes || toma.via) + '</div>' +
           '</div>' +
         '</label>' +
       '</div>';
