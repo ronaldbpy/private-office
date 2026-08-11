@@ -827,3 +827,112 @@ model AccountingReport {
 
 // Agregar relaciones a Entity (ver cambios abajo)
 
+
+// ---------------------------------------------------------------------------
+// HEALTH & WELLNESS — Weight tracking, medications, health metrics
+// ---------------------------------------------------------------------------
+
+model HealthWeight {
+  id              String   @id @default(uuid())
+  userId          String   // clerkUserId - reference to user (not Entity-linked)
+  
+  date            DateTime // date of measurement
+  weightKg        Float    // weight in kg
+  source          String   // "apple_health" | "zepp_life" | "manual_entry"
+  
+  // Deduplication: when importing, check for existing records
+  // within ±1 day and ±0.5kg variance
+  sourceRecordId  String?  // original ID from Apple Health XML, Zepp, etc.
+  
+  notes           String?  // optional notes
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([date])
+  @@unique([userId, date, weightKg])
+  @@map("health_weights")
+}
+
+model Medication {
+  id              String   @id @default(uuid())
+  userId          String   // clerkUserId
+  
+  name            String   // ej: "Cesalgin Gesic" | "Metformina"
+  doseMg          Float?   // dosis en mg
+  unit            String   @default("mg") // mg | ml | tablets | etc.
+  category        String?  // "analgesic" | "antidiabetic" | "antibiotic" etc.
+  
+  // Prescription details
+  prescribedBy    String?  // doctor name (ej: "Dr. Fernando Espinola")
+  prescribedDate  DateTime?
+  startDate       DateTime // when to start taking
+  endDate         DateTime? // when to stop (null = ongoing)
+  
+  // Dosing schedule
+  frequency       String   // "daily" | "twice_daily" | "three_times" | "four_times" | "weekly" | "as_needed"
+  timesPerDay     Int      @default(1) // 1-4 for daily medications
+  
+  // Scheduled times (for daily medications) — stored as HH:MM strings
+  scheduledTimes  String[] @default([]) // ["08:00", "13:00", "20:00"]
+  
+  // Tracking
+  isActive        Boolean  @default(true)
+  autoNotify      Boolean  @default(true) // send Service Worker notifications
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  doses           MedicationDose[]
+  
+  @@index([userId])
+  @@index([isActive])
+  @@map("medications")
+}
+
+model MedicationDose {
+  id              String   @id @default(uuid())
+  medicationId    String
+  medication      Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  
+  userId          String   // denormalized for quick queries
+  doseDate        DateTime // date when dose was taken
+  
+  // Completion status
+  taken           Boolean  @default(false)
+  takenAt         DateTime? // when actually taken (null if not taken)
+  
+  // Adherence tracking
+  reminderSentAt  DateTime? // when notification was sent
+  
+  notes           String?  // ej: "took with food"
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([medicationId])
+  @@index([doseDate])
+  @@unique([medicationId, doseDate])
+  @@map("medication_doses")
+}
+
+model AppleHealthImportLog {
+  id              String   @id @default(uuid())
+  userId          String
+  
+  importedAt      DateTime @default(now())
+  recordsProcessed Int      // total records attempted
+  recordsImported Int       // successfully imported
+  recordsSkipped  Int       // duplicates or invalid
+  
+  sourceFile      String?  // filename or path
+  errors          String?  @db.Text // JSON array of errors
+  
+  @@index([userId])
+  @@map("apple_health_import_logs")
+}

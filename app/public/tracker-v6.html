@@ -1820,6 +1820,8 @@ function dashboard() {
         '<span class="qa-icon">💧</span><span>Beber</span></button>' +
       '<button type="button" class="btn secondary" onclick="openMedicationModal()">' +
         '<span class="qa-icon">💊</span><span>Medicamento</span></button>' +
+      '<button type="button" class="btn secondary" onclick="openAppleHealthImportDialog()" title="Importar pesos desde Apple Health">' +
+        '<span class="qa-icon">⚖️</span><span>Pesos</span></button>' +
     '</div>';
 
   const statCard = function (label, cls, consumed, target, unit) {
@@ -4059,9 +4061,15 @@ autodeactivateMedications();
 attachEventListeners();
 render();
 
+// Initialize health integration (Apple Health import, medications, syncing)
+if (typeof initHealthIntegration === 'function') {
+  initHealthIntegration().catch(e => console.error('[tracker-v6] Health integration init failed:', e));
+}
+
 // Log test command for user
 console.log('[tracker-v6] To import doctor medications, run: importDoctorMedications(DOCTOR_MEDICATIONS_2026_08_10)');
 </script>
 <script src="/tracker/nutrition-db.js"></script>
+<script src="/tracker/tracker-health-integration.js"></script>
 </body>
 </html>
