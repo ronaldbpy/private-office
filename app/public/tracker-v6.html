@@ -4074,6 +4074,22 @@ try {
   render();
   console.log('[INIT] autodeactivateMedications...');
   autodeactivateMedications();
+
+  // Auto-load prescription medications from server
+  console.log('[INIT] Loading prescription medications...');
+  fetch('/api/tracker/load-prescription?date=' + (currentDate || today()))
+    .then(r => r.json())
+    .then(d => {
+      if (d.loaded) {
+        console.log('[INIT] ✓ Prescription loaded: ' + d.medications_count + ' doses');
+        // Reload to show new medications
+        setTimeout(() => { render(); }, 500);
+      } else {
+        console.log('[INIT] Prescription already loaded');
+      }
+    })
+    .catch(e => console.warn('[INIT] Could not load prescription:', e.message));
+
   console.log('[INIT] ✓ App initialized successfully');
 } catch (e) {
   console.error('[INIT] ERROR:', e.message, e.stack);
