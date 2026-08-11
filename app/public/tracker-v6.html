@@ -1195,7 +1195,8 @@ function save() {
   }
 
   // Sync to server
-  fetch('/api/sync', {
+  var apiBase = (window.location.origin.includes('elq.lvu') ? window.location.origin + '/tracker' : 'https://elq.lvu.mybluehost.me/tracker');
+  fetch(apiBase + '/api/sync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -4077,7 +4078,8 @@ try {
 
   // Auto-load prescription medications from server
   console.log('[INIT] Loading prescription medications...');
-  fetch('/api/tracker/load-prescription?date=' + (currentDate || today()))
+  var apiBase = (window.location.origin.includes('elq.lvu') ? window.location.origin + '/tracker' : 'https://elq.lvu.mybluehost.me/tracker');
+  fetch(apiBase + '/api/load-prescription?date=' + (currentDate || today()))
     .then(r => r.json())
     .then(d => {
       if (d.loaded) {
