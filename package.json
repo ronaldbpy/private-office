@@ -1,0 +1,9 @@
+{
+  "name": "tracker-v6",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "cd app && npm test -- tests/data-layer.test.js",
+    "test:run": "cd app && npm run test:run -- tests/data-layer.test.js"
+  }
+}
