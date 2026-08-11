@@ -1263,16 +1263,27 @@ function getMacrosByWeight(foodId, grams, isCocido) {
   isCocido = isCocido || false;
   const round1 = function (x) { return Math.round(x * 10) / 10; };
 
-  // Try NUTRITION_DB first (portion-based)
+  // Try NUTRITION_DB first (portion-based) - SCALE by grams
   if (typeof NUTRITION_DB !== 'undefined' && NUTRITION_DB.foods && Array.isArray(NUTRITION_DB.foods)) {
     const nutrFood = NUTRITION_DB.foods.find(function (f) { return f.id === foodId; });
     if (nutrFood) {
-      // NUTRITION_DB returns fixed portion macros directly (no scaling by grams)
+      // Extract portion_grams from NUTRITION_DB (e.g., "150g cocido" → 150)
+      // If not present, estimate from portion string or default to 100g
+      let portionGrams = nutrFood.portion_grams;
+      if (!portionGrams && nutrFood.portion) {
+        // Try to extract number from portion string (e.g., "150g" → 150)
+        const match = nutrFood.portion.match(/(\d+)\s*g/);
+        portionGrams = match ? parseInt(match[1], 10) : 100;
+      }
+      portionGrams = portionGrams || 100;
+
+      // Scale macros by (input_grams / portion_grams)
+      const ratio = n(grams) / portionGrams;
       return {
-        prot: round1(n(nutrFood.protein) || 0),
-        carb: round1(n(nutrFood.carbs) || 0),
-        fat: round1(n(nutrFood.fat) || 0),
-        kcal: round1(n(nutrFood.kcal) || 0)
+        prot: round1(n(nutrFood.protein) * ratio || 0),
+        carb: round1(n(nutrFood.carbs) * ratio || 0),
+        fat: round1(n(nutrFood.fat) * ratio || 0),
+        kcal: round1(n(nutrFood.kcal) * ratio || 0)
       };
     }
   }
