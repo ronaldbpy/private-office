@@ -4061,15 +4061,21 @@ autodeactivateMedications();
 attachEventListeners();
 render();
 
-// Initialize health integration (Apple Health import, medications, syncing)
-if (typeof initHealthIntegration === 'function') {
-  initHealthIntegration().catch(e => console.error('[tracker-v6] Health integration init failed:', e));
-}
-
 // Log test command for user
 console.log('[tracker-v6] To import doctor medications, run: importDoctorMedications(DOCTOR_MEDICATIONS_2026_08_10)');
 </script>
+
+<!-- Load external scripts first -->
 <script src="/tracker/nutrition-db.js"></script>
 <script src="/tracker/tracker-health-integration.js"></script>
+
+<!-- Initialize health integration after scripts load -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof initHealthIntegration === 'function') {
+    initHealthIntegration().catch(e => console.error('[tracker-v6] Health integration init failed:', e));
+  }
+});
+</script>
 </body>
 </html>
