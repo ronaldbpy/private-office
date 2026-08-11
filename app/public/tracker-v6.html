@@ -1194,21 +1194,12 @@ function save() {
     console.error('[tracker-v6] save() localStorage failed', e);
   }
 
-  // Sync to server
+  // Sync to server - disabled due to CORS
+  // (App runs fully local with localStorage; server sync requires same-domain deployment)
+  /*
   var apiBase = (window.location.origin.includes('elq.lvu') ? window.location.origin + '/tracker' : 'https://elq.lvu.mybluehost.me/tracker');
-  fetch(apiBase + '/api/sync', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      date: date,
-      meals: day.meals || [],
-      medications: day.medications || [],
-      checkins: day.checkin || null,
-      weights: day.weights || []
-    })
-  }).catch(function(e) {
-    console.warn('[tracker-v6] sync to server failed', e);
-  });
+  fetch(apiBase + '/api/sync', {...}).catch(...);
+  */
 
   return state;
 }
@@ -4076,21 +4067,9 @@ try {
   console.log('[INIT] autodeactivateMedications...');
   autodeactivateMedications();
 
-  // Auto-load prescription medications from server
-  console.log('[INIT] Loading prescription medications...');
-  var apiBase = (window.location.origin.includes('elq.lvu') ? window.location.origin + '/tracker' : 'https://elq.lvu.mybluehost.me/tracker');
-  fetch(apiBase + '/api/load-prescription?date=' + (currentDate || today()))
-    .then(r => r.json())
-    .then(d => {
-      if (d.loaded) {
-        console.log('[INIT] ✓ Prescription loaded: ' + d.medications_count + ' doses');
-        // Reload to show new medications
-        setTimeout(() => { render(); }, 500);
-      } else {
-        console.log('[INIT] Prescription already loaded');
-      }
-    })
-    .catch(e => console.warn('[INIT] Could not load prescription:', e.message));
+  // Auto-load prescription medications - disabled due to CORS
+  // (Run fully local; manual entry or same-domain deployment required for server sync)
+  console.log('[INIT] Prescription auto-load disabled (CORS)');
 
   console.log('[INIT] ✓ App initialized successfully');
 } catch (e) {
