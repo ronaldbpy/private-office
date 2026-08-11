@@ -3973,7 +3973,12 @@ function tomasDehoyHtml() {
       '</div>';
   }
 
-  const itemsHtml = tomas.map(function (toma) {
+  // Filter out medications with undefined name/time, show only valid entries
+  const validTomas = tomas.filter(function (toma) {
+    return toma.nombre && (toma.time || toma.horario);
+  });
+
+  const itemsHtml = validTomas.map(function (toma) {
     const hora = toma.time || toma.horario || '';
     const isChecked = toma.estado === 'tomado';
     const checkboxId = 'med_' + toma.medicationId + '_' + hora;
@@ -3995,7 +4000,7 @@ function tomasDehoyHtml() {
 
   return '' +
     '<div class="card">' +
-      '<div class="card-header"><h3>Tomas de hoy · ' + esc(viewDate) + '</h3><span class="badge primary">' + tomas.length + '</span></div>' +
+      '<div class="card-header"><h3>Tomas de hoy · ' + esc(viewDate) + '</h3><span class="badge primary">' + validTomas.length + '</span></div>' +
       itemsHtml +
     '</div>';
 }
