@@ -2078,11 +2078,12 @@ function weightChart(days) {
   const max = Math.max.apply(null, weights);
   const range = Math.max(max - min, 1); // avoid div-by-zero on a flat week
 
-  const W = 700, H = 220, padTop = 26, padBottom = 36, padLeft = 6, padRight = 6;
+  // iPhone-responsive: width adapts to viewport, height fixed
+  const W = 320, H = 160, padTop = 20, padBottom = 28, padLeft = 4, padRight = 4;
   const chartH = H - padTop - padBottom;
   const chartW = W - padLeft - padRight;
-  const slot = chartW / entries.length;
-  const barW = Math.max(2, slot - 2);
+  const slot = Math.max(3, chartW / Math.min(entries.length, 14)); // Max 14 bars for clarity
+  const barW = Math.max(2, slot - 1);
 
   const fmtDate = function (d) {
     const parts = d.split('-');
@@ -2123,7 +2124,7 @@ function weightChart(days) {
 
   // Calculate date label spacing: show dates at regular intervals if many entries
   const dateLabels = [];
-  const labelInterval = Math.ceil(entries.length / 5); // Show up to 5 date labels
+  const labelInterval = Math.ceil(entries.length / 3); // Show up to 3 date labels for mobile
   for (let i = 0; i < entries.length; i += labelInterval) {
     if (i < entries.length) {
       const bar = barData[i];
@@ -2297,7 +2298,7 @@ function analyticsView() {
 
   return '' +
     '<h2 class="mb-3">Analítica</h2>' +
-    weightChart(90) +
+    weightChart(30) +
     macrosChart() +
     hydrationChartHtml +
     '<div class="chart-card">' +
