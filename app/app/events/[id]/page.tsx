@@ -9,9 +9,8 @@ interface Event {
   entityId: string;
   title: string;
   description: string;
-  eventDate: string;
+  startDate: string;
   location: string;
-  attendees: number;
   status: string;
   entity: { id: string; name: string };
 }
@@ -51,15 +50,12 @@ export default function EventDetailPage() {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <p className="text-xs text-text-tertiary">Fecha</p>
-            <p className="text-lg font-semibold">{new Date(event.eventDate).toLocaleDateString()}</p>
+            <p className="text-lg font-semibold">{new Date(event.startDate).toLocaleDateString()}</p>
           </div>
+
           <div>
             <p className="text-xs text-text-tertiary">Ubicación</p>
             <p className="text-lg font-semibold">{event.location || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-text-tertiary">Asistentes</p>
-            <p className="text-lg font-semibold">{event.attendees}</p>
           </div>
           <div>
             <p className="text-xs text-text-tertiary">Estado</p>

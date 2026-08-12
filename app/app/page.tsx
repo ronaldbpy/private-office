@@ -7,6 +7,7 @@ import { VaultSection } from "@/components/VaultSection";
 import { TreasurySection } from "@/components/TreasurySection";
 import { TimelineSection } from "@/components/TimelineSection";
 import { PageTransition } from "@/components/PageTransition";
+import { KPIGrid } from "@/components/KPICards";
 
 function Badge({
   tone,
@@ -95,6 +96,14 @@ export default async function Home() {
   const entityIds = accessibleEntityIds(access);
 
   const today = new Date();
+
+  // KPI metrics
+  const entityCount = await prisma.entity.count({ where: { id: { in: entityIds } } });
+  const customerCount = await prisma.customer.count({ where: { entityId: { in: entityIds } } });
+  const upcomingEventsCount = await prisma.event.count({
+    where: { entityId: { in: entityIds }, startDate: { gte: today } },
+  });
+  const reportsCount = await prisma.accountingReport.count({ where: { entityId: { in: entityIds } } });
 
   // Regla FS-005: un usuario sin entidades asignadas ve un estado vacío,
   // nunca un error ni datos de otra persona.
@@ -328,7 +337,13 @@ export default async function Home() {
 
   return (
     <PageTransition>
-      <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10 sm:px-8">
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 px-6 py-10 sm:px-8">
+      <KPIGrid
+        entities={entityCount}
+        customers={customerCount}
+        upcomingEvents={upcomingEventsCount}
+        recentReports={reportsCount}
+      />
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">

@@ -11,9 +11,8 @@ export default function NewEventPage() {
     entityId: "",
     title: "",
     description: "",
-    eventDate: new Date().toISOString().split("T")[0],
+    startDate: new Date().toISOString().split("T")[0],
     location: "",
-    attendees: 0,
   });
 
   useEffect(() => {
@@ -97,17 +96,8 @@ export default function NewEventPage() {
               <input
                 type="date"
                 required
-                value={formData.eventDate}
-                onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded bg-surface-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Asistentes</label>
-              <input
-                type="number"
-                value={formData.attendees}
-                onChange={(e) => setFormData({ ...formData, attendees: parseInt(e.target.value) || 0 })}
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 className="w-full px-3 py-2 border border-border rounded bg-surface-2"
               />
             </div>
