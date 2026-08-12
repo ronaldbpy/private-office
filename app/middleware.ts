@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/api/health",
-  "/api(.*)",
+  "/api/docs",
+  "/api/openapi.json(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
