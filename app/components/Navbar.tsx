@@ -30,6 +30,7 @@ export function Navbar() {
             <Link href="/projects" className={`transition ${isActive("/projects") || pathname.startsWith("/projects/") ? "text-accent font-semibold" : "text-text-secondary hover:text-text-primary"}`}>Proyectos</Link>
             <Link href="/parties" className={`transition ${isActive("/parties") || pathname.startsWith("/parties/") ? "text-accent font-semibold" : "text-text-secondary hover:text-text-primary"}`}>Contactos</Link>
             <Link href="/documents" className={`transition ${isActive("/documents") ? "text-accent font-semibold" : "text-text-secondary hover:text-text-primary"}`}>Docs</Link>
+            <Link href="/accounting-reports" className={`transition ${isActive("/accounting-reports") || pathname.startsWith("/accounting-reports/") ? "text-accent font-semibold" : "text-text-secondary hover:text-text-primary"}`}>Contabilidad</Link>
             <Link href="/holdings" className={`transition ${isActive("/holdings") ? "text-accent font-semibold" : "text-text-secondary hover:text-text-primary"}`}>Propiedad</Link>
           </div>
           <MobileNav />
